@@ -1,0 +1,382 @@
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js" ></script>
+<script type="text/javascript">
+	var categoryID = 'office_building';
+	var jobID = 'trial_002/0001';
+	//var numImages = 20;
+
+/*  // for AMTurk 
+	var categoryID = '${categoryID}';
+	var jobID = '${jobID}';
+	var numImages = ${numImages};
+*/
+</script>
+
+
+<style>
+.myButton {
+	background-color:#44c767;
+	-moz-border-radius:28px;
+	-webkit-border-radius:28px;
+	border-radius:28px;
+	border:1px solid #18ab29;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family:Arial;
+	font-size:17px;
+	padding:16px 31px;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #2f6627;
+}
+.myButton:hover {
+	background-color:#5cbf2a;
+}
+.myButton:active {
+	position:relative;
+	top:1px;
+}
+</style>
+
+<style type="text/css">
+	div{
+		-webkit-user-select: none;
+		-moz-user-select: none; 
+	}
+	.target{
+		color: #0D0;
+	}
+	.target img{
+		border: 3px solid #0D0;
+	}
+	.noise{
+		color: #F00;
+	}
+	.noise img{
+		border: 3px solid #F00;
+	}
+	.target p:first-child{
+		display: none;
+	}
+	.target p:nth-child(2){
+		display: inline;
+	}
+	.noise p:first-child{
+		display: inline;
+	}
+	.noise p:nth-child(2){
+		display: none;
+	}
+	.none p:first-child{
+		display: none;
+	}
+	.none p:nth-child(2){
+		display: none;
+	}
+
+	.example {
+
+		display: inline-block;
+		text-align: center;
+		padding: 2px;
+	}
+	.example img{
+		border-width: 6px;
+		max-width: 120px;
+		height: 75px;
+	}	
+	.example p{
+		font-weight: normal; font-size: 12pt;
+	}
+
+
+	.focus { 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding-left: 12px;		
+   		padding-right: 12px;		
+   		padding-top: 0px;		
+   		padding-bottom: 0px;		
+		width: 470px; height: 520px;
+	}	
+
+	.focus0 { 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding-left: 12px;		
+   		padding-right: 12px;		
+   		padding-top: 0px;		
+   		padding-bottom: 0px;		
+		width: 470px; height: 520px;
+	}	
+
+	.focus1{ 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 6px;		
+		width: 100px; height: 100px;
+	}	
+	.focus2{ 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 4px;		
+		width: 50px;  height: 50px; 
+	}	
+	.focus3{ 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 2px;		
+		width: 25px;  height: 25px; 
+	}	
+
+	.focus img{ 
+		max-height: 446px;
+		max-width: 446px;
+		width: 100%;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;		
+		border-width: 12px; 
+	}	
+
+	.focus0 img{ 
+		max-width: 446px;
+		max-height: 446px;
+		height: 100%;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;		
+		border-width: 12px; 
+	}	
+
+	.focus1 img{ 
+		max-width: 88px;
+		max-height: 88px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+		border-width: 6px; 
+	}	
+
+	.focus2 img{ 
+		max-width: 42px;
+		max-height: 42px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+		border-width: 4px; 
+	}	
+	.focus3 img{ 
+		max-width: 21px;
+		max-height: 21px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+		border-width: 2px; 
+	}	
+
+	.focus p{ 
+		font-weight: bolder; font-size: 28pt; 
+	}
+	.focus0 p{ 
+		font-weight: bolder; font-size: 28pt; 
+	}
+	.focus1 p{ 
+		display: none;
+		font-weight: normal; font-size: 16pt; 
+	}
+	.focus2 p{ 
+		display: none;		
+		font-weight: normal; font-size: 9pt; 
+	}
+	.focus3 p{ 
+		display: none;	
+		font-weight: normal; font-size: 6pt; 
+	}
+</style>
+
+<script type="text/javascript">
+
+var workerId;
+var assignmentId;
+var hitId;
+var popupWindow = null;
+
+function gup( name )
+{
+	name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+	var regexS = "[\\?&]"+name+"=([^&#]*)";
+	var regex = new RegExp( regexS );
+	var results = regex.exec( window.location.href );
+	if( results == null )
+		return "NO_GUP_VAL";
+	else
+		return results[1];
+}
+
+var myWindow;
+
+function notifyBack(message){
+	//alert('get notify by the popup window: '+message);
+
+	if (message.substring(0,5)=="DONE:"){
+		$('#answer2mturk').val(message.substring(6));
+		myWindow.close();
+		$('#SubmitButton').click();
+	}
+
+}
+
+function popupWindowNow(){
+	if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE"){
+		alert("Please accept the HIT first before you can start");
+	}else{
+
+
+		myWindow = window.open("", "fullscreen", "width=400, height=300, menubar=no, status=no, titlebar=no, toolbar=no");   // Opens a new window
+		
+		
+		{
+			var script = myWindow.document.createElement('script');
+			//script.onload = function() {
+			//	alert("Script loaded and ready");
+			//};
+			script.src = "https://ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js";
+			myWindow.document.getElementsByTagName('head')[0].appendChild(script);
+		}
+		
+
+		{
+			var script = myWindow.document.createElement('script');
+			//script.onload = function() {
+			//	alert("Script loaded and ready");
+			//};
+			script.src = "https://vision.princeton.edu/pvt/TurkCleaner/fullscreen/code.js";
+			myWindow.document.getElementsByTagName('head')[0].appendChild(script);
+
+		}
+
+		
+		
+		myWindow.document.write("<div id=\x22div2fullscreen\x22 style=\x22width: 100%; height: 100%;\x22><button id=\x22StartButton\x22 style = \x22background-color:#44c767; -moz-border-radius:28px; -webkit-border-radius:28px; border-radius:28px; border:1px solid #18ab29; display:inline-block; cursor:pointer; color:#ffffff; font-family:Arial; font-size:17px; padding:16px 31px; text-decoration:none; text-shadow:0px 1px 0px #2f6627;\x22 onclick=\x22StartNow('"+categoryID+"','"+jobID+"','"+workerId+"','"+assignmentId+"','"+hitId+"');\x22>Click to Allow Fullscreen</button></div>");
+	}
+}
+
+
+$(document).ready(function(){
+
+	$.getJSON( "https://vision.princeton.edu/lsun/mturk/job/"+categoryID+"/"+jobID+".json", function( data ) {
+		$("#imageCount").html(data.length);
+	});
+
+	$.getJSON( "https://vision.princeton.edu/lsun/mturk/category/"+categoryID+".json", function( data ) {
+		$("#category_name").html(data.name);
+		$("#definitionDiv").html(data.definition);
+
+		var exampleStr = '';
+		for (var i=0; i< data.examples.length;++i){
+			exampleStr = exampleStr + '<div class="';
+			if (data.examples[i].truth){
+				exampleStr = exampleStr + 'target';
+			}else{
+				exampleStr = exampleStr + 'noise';
+			}
+			exampleStr = exampleStr + ' example"><p>&nbsp;&nbsp;'+ data.examples[i].note
+			exampleStr = exampleStr + '&nbsp;&nbsp;</p><p>&nbsp;&nbsp;' + data.examples[i].note
+			exampleStr = exampleStr + '&nbsp;&nbsp;</p><br/><img src="';
+			exampleStr = exampleStr + data.examples[i].image;
+			exampleStr = exampleStr + '" /></div>';
+		}
+		$('#exampleDiv').html(exampleStr);
+	});
+
+	workerId = gup('workerId');
+	assignmentId = gup('assignmentId');
+	hitId = gup('hitId');
+	if (assignmentId != "ASSIGNMENT_ID_NOT_AVAILABLE"){
+		$('#popupWindowButton').html('Click to open a new window to start. Do NOT close this window.');
+	}
+
+});
+
+</script>
+
+
+<div id="instructionDiv" style="width: 822px; height: 30px; text-align: center; margin-left: auto; margin-right: auto; font-size:30px; font-weight:bold;">&nbsp; Is this <span style="color: #00F;" id="category_name">Category Here</span>?&nbsp;</div>
+
+<div id="definitionDiv" style="width: 822px; margin-left: auto; margin-right: auto; z-index: 10px; text-align: center; margin-top: 8px;">Definition Here</div>
+
+<div style="width: 100%; text-align: center; margin-top: 5px;">
+<div class="myButton" id="popupWindowButton" onclick="popupWindowNow();" >Accept the HIT first before you can start.</div>
+</div>
+
+<div id="instrDiv" style="width: 822px; margin-left: auto; margin-right: auto; z-index: 10px; ">
+
+
+<h3 style="margin-top: 0; margin-bottom: 0;">Task</h3>
+
+<p>For each of the <span id="imageCount" style="font-weight: bold; color: #00F;">N</span> images, answer yes or no to the above question. Only answer <b style="font-weight: bold; color: #0B0;">Yes</b> to <b style="font-weight: bold; color: #00F;">real photos</b>. Always answer <b style="font-weight: bold; color: #F00;">No</b> to <b style="font-weight: bold; color: #F00;">cartoon</b>, <b style="font-weight: bold; color: #F00;">drawing</b>, or <b style="font-weight: bold; color: #F00;">CG rendering</b>. Here are some examples:</p>
+
+<ul>
+
+</ul>
+
+<div id="exampleDiv" style="text-align: center; margin-top: 0;">&nbsp;</div>
+
+<h3 style="margin-top: 0; margin-bottom: 0; color: #FF0000;">What's New?</h3>
+
+<ul>
+
+	<li>We will perform an additional check on the accuracy after the submission. Though very unlikely to happen, you HIT would still possibly be rejected if your accuracy is severely low in the additional check.</li>
+
+	<li>You have 5 chances to click the [submit] button which triggers an accuracy check. Between each two clicks, you have to wait for 20 seconds to make sure you do a meaningful refinement. </li>
+
+	<li>If you cannot pass the accuracy check within 5 chances, you may still refine your response and submit the hit once it passes the check. However, your result will be checked more throughly offline before approval, and it is more likely to get rejected. Therefore, do not abuse the submit button. Try to have good results before you try to submit.</li>
+
+</ul>
+
+<h3>Disclaimer</h3>
+<ul>
+<li>If some images are not displayed properly, please let us know and do NOT continue working. Keep on working under this situation may cause your hit rejected.</li>
+<li>Although the task is not adult-oriented, some images are automatically crawled from the Internet, and in some rare situations, they may be disturbing due to nude, violent or scary photos.</li>
+</ul>
+
+<h3 style="margin-top: 0; margin-bottom: 0;">Submit</h3>
+
+<ul>
+
+	<li>After you respond to all of the images, the [submit] button will be enabled.</li>
+
+	<li><b style="color: #00F;">If your accuracy is too low, you will not be able to submit. You will have to improve your answers first.</b></li>
+
+</ul>
+
+
+<h3 style="margin-top: 0; margin-bottom: 0;">Usage</h3>
+
+<img src="http://vision.princeton.edu/pvt/TurkCleaner/instruction/keyboard_small.jpg" style="float : right; width: 45%; margin : 0 0 0px 10px;" />
+
+<ul>
+	<li>Maximize your window size</li>
+
+	<li>Keep the right arrow [&rarr;] key (or [d] key) pressed down to move continuously from an image to the next. Release the key when you see an image for which the answer should be YES.</li>
+
+	<li>Use [space] key to toggle the answer to YES. The default answer is NO.</li>
+
+	<li>Use the left arrow [&larr;] key (or [a] key) to go back to the previously seen images, if you skipped an image accidentally.</li>
+
+</ul>
+
+
+<p style="font-size: 8pt; color: #999;">By making judgments about these images, you are participating in a study being performed by Princeton University. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.</p>
+
+<input type="hidden" name="answer2mturk" id="answer2mturk" value="" autocomplete="off" />
+
+<input type=SUBMIT value="Submit" id="SubmitButton" style="display: none;">
+
+
+</div>

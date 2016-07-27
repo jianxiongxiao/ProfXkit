@@ -1,0 +1,414 @@
+<html><body>
+
+
+
+<script src="jquery-1.10.0.min.js" type="text/javascript"></script>
+<script src="data.js" type="text/javascript"></script>
+
+
+<!--
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js" ></script>
+<script type="text/javascript">
+	var data=${data};
+</script>
+-->
+	
+<style>
+	div{
+		 -webkit-user-select: none;
+		 -moz-user-select: none; 
+	}
+	.show img {	
+		max-width: 99%;
+		max-height: 99% !important;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+	}
+	.show{
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 12px;
+	}
+	.show p{
+		display: none;
+		font-size: 12pt;
+		font-weight: normal;
+	}
+	.target{
+		color: #0F0;
+	}
+	.noise{
+		color: #F00;
+	}
+	.target img{
+		border: 3px solid #0F0;
+	}
+	.noise img{
+		border: 3px solid #F00;
+	}
+	.target p:first-child{
+		display: none;
+	}
+	.target p:nth-child(2){
+		display: inline;
+	}
+	.noise p:first-child{
+		display: inline;
+	}
+	.noise p:nth-child(2){
+		display: none;
+	}
+	.none p:first-child{
+		display: none;
+	}
+	.none p:nth-child(2){
+		display: none;
+	}
+
+
+	.focus img{ border-width: 12px; }	
+	.focus p{ font-weight: bolder; font-size: 28pt; }
+
+	.focus1 img{ border-width: 6px; }	
+	.focus1 p{ font-weight: normal; font-size: 16pt; }
+	.focus2 img{ border-width: 4px; }	
+	.focus2 p{ font-weight: normal; font-size: 9pt; }
+	.focus3 img{ border-width: 2px; }	
+	.focus3 p{ font-weight: normal; font-size: 6pt; }
+
+
+
+</style>
+
+
+
+
+
+<script type="text/javascript">
+
+	var currentIndex = -5;
+	var timerHandle;
+	var keyIsDown = false;
+	
+	var testCount = 0;
+	var correctCount = 0;
+
+	var eventScript = '';
+
+	function answerHit(){
+		if ($('#holderDiv'+currentIndex).hasClass('target')){
+			$('#holderDiv'+currentIndex).removeClass('target');
+			$('#holderDiv'+currentIndex).addClass('noise');
+		}else{
+			$('#holderDiv'+currentIndex).addClass('target');
+			$('#holderDiv'+currentIndex).removeClass('noise');
+		}
+	}
+
+	function currentTime(){
+		var d = new Date();
+		return d.getTime();
+	}
+
+	$(window).keydown(function(e){
+		e.preventDefault();
+		var key = e.which | e.keyCode;
+
+		eventScript = eventScript + currentTime() + 'up' + key + ';';
+
+		if ( !keyIsDown){
+		    if(key === 39 || key == 68){
+		    	keyIsDown = true;
+		    	if (currentIndex+1<data.length){
+						currentIndex = currentIndex + 1;
+						displayFrame(currentIndex); 
+				}
+				timerHandle =setInterval(function(){
+					if (currentIndex+1<data.length){
+						currentIndex = currentIndex + 1;
+						displayFrame(currentIndex); 
+					}else{
+						clearInterval(timerHandle);
+					}
+				},400);	    	
+		    }
+		    if(key === 37 || key == 65){
+		    	keyIsDown = true;
+				if (currentIndex-1>=0){
+						currentIndex = currentIndex - 1;
+						displayFrame(currentIndex); 
+				}		    	
+				timerHandle =setInterval(function(){
+					if (currentIndex-1>=0){
+						currentIndex = currentIndex - 1;
+						displayFrame(currentIndex); 
+					}else{
+						clearInterval(timerHandle);
+					}
+				},400);	    	
+		    }
+		}
+		updateSubmitButton();
+	});
+
+	$(window).keyup(function(e){
+		e.preventDefault();
+		var key = e.which | e.keyCode;
+
+		eventScript = eventScript + currentTime() + 'up' + key + ';';
+
+	    if(key === 32 ){
+	    	answerHit();
+	    }
+	    if(key === 37  || key == 65|| key === 39 || key == 68){
+	    	clearInterval(timerHandle);
+	    	keyIsDown = false;
+	    }
+	    updateSubmitButton();
+	});
+
+	function displayFrame(n){
+		if (!($('#holderDiv'+n).hasClass('target') || $('#holderDiv'+n).hasClass('noise') ) ){
+			$('#holderDiv'+n).addClass('noise');
+		}
+		$('#holderDiv'+(n-4)).hide();
+		$('#holderDiv'+(n-3)).show();		$('#holderDiv'+(n-3)).width(25);	$('#holderDiv'+(n-3)).height(25);
+		$('#holderDiv'+(n-2)).show();		$('#holderDiv'+(n-2)).width(50);	$('#holderDiv'+(n-2)).height(50);
+		$('#holderDiv'+(n-1)).show();		$('#holderDiv'+(n-1)).width(100);	$('#holderDiv'+(n-1)).height(100);
+		$('#holderDiv'+n    ).show();		$('#holderDiv'+n    ).width(400);	$('#holderDiv'+n    ).height(400);
+		$('#holderDiv'+(n+1)).show();		$('#holderDiv'+(n+1)).width(100);	$('#holderDiv'+(n+1)).height(100);
+		$('#holderDiv'+(n+2)).show();		$('#holderDiv'+(n+2)).width(50);	$('#holderDiv'+(n+2)).height(50);
+		$('#holderDiv'+(n+3)).show();		$('#holderDiv'+(n+3)).width(25);	$('#holderDiv'+(n+3)).height(25);
+		$('#holderDiv'+(n+4)).hide();
+
+
+		$('#holderDiv'+(n-3)).addClass('focus3');	$('#holderDiv'+(n-3)).removeClass('focus2');	
+		$('#holderDiv'+(n-2)).addClass('focus2');	$('#holderDiv'+(n-2)).removeClass('focus1');  $('#holderDiv'+(n-2)).removeClass('focus3');	
+		$('#holderDiv'+(n-1)).addClass('focus1');	$('#holderDiv'+(n-1)).removeClass('focus');   $('#holderDiv'+(n-1)).removeClass('focus2');	
+		$('#holderDiv'+n    ).addClass('focus');	$('#holderDiv'+n    ).removeClass('focus1');
+		$('#holderDiv'+(n+1)).addClass('focus1');	$('#holderDiv'+(n+1)).removeClass('focus');   $('#holderDiv'+(n+1)).removeClass('focus2');	
+		$('#holderDiv'+(n+2)).addClass('focus2');	$('#holderDiv'+(n+2)).removeClass('focus1');  $('#holderDiv'+(n+2)).removeClass('focus3');	
+		$('#holderDiv'+(n+3)).addClass('focus3');	$('#holderDiv'+(n+3)).removeClass('focus2');	
+
+
+	}
+
+	var hasFocus = false;
+	function start(){
+		hasFocus = true;
+		$('#startButton').hide();
+		$('#submitButton').show();
+		checkDisplay();
+
+		eventScript = eventScript + currentTime() + 'st;';
+	}
+	var loadedCount = 0;
+	function imageLoaded(n){
+		console.log('id=' + n + ' count=' + loadedCount);
+		loadedCount = loadedCount + 1;
+		checkDisplay();
+
+		eventScript = eventScript + currentTime() + 'ld' + n + ';';
+	}
+
+
+	function checkDisplay(){
+		if (loadedCount < data.length && hasFocus){
+			$('#instrDiv').hide();
+			$('#loadingDiv').show();
+			$('#contentDiv').hide();
+		}
+		if (loadedCount== data.length && !hasFocus){
+			$('#instrDiv').show();
+			$('#loadingDiv').hide();
+			$('#contentDiv').hide();
+		}		
+		if (loadedCount== data.length && hasFocus){
+			$('#instrDiv').hide();
+			$('#loadingDiv').hide();
+			$('#contentDiv').show();
+		}
+	}
+
+	function gup( name )
+	{
+		name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+		var regexS = "[\\?&]"+name+"=([^&#]*)";
+		var regex = new RegExp( regexS );
+		var results = regex.exec( window.location.href );
+		if( results == null )
+			return "NO_VAL";
+		else
+			return results[1];
+	}
+	var workerId;
+	var assignmentId;
+	var hitId;
+	var gameId;
+
+
+
+	$(document).ready(function(){
+		workerId = gup('workerId');
+		assignmentId = gup('assignmentId');
+
+		if ( assignmentId == 'ASSIGNMENT_ID_NOT_AVAILABLE' ){
+			$("#startButton").html('accept the hit first before you can start');
+			$('#startButton').attr("disabled", "disabled");
+		}else{
+			$("#startButton").html('start');
+			$('#startButton').removeAttr("disabled");
+			eventScript = eventScript + currentTime() + 'ac;';
+		}
+
+		hitId = gup('hitId');
+		gameId = gup('gameId');
+		loadData();
+
+		$('#imageCount').html(data.length);
+	});
+
+	function loadData(){
+		for (var i = 0; i<data.length; i++) {
+			if ('truth' in data[i]){
+				testCount++;
+			}
+		}
+		for (var i=-4;i<0;i++){
+			$('#contentDiv').append('<div class="show" style="display: none;" id="holderDiv' + i + '"></div>');
+		}
+		for (var i=0;i<data.length;i++){
+			$('#contentDiv').append('<div class="show" style="display: none;" id="holderDiv' + i + '"><p>No</p><p>Yes</p></div>');
+		}
+		for (var i=data.length;i<data.length+4;i++){
+			$('#contentDiv').append('<div class="show" style="display: none;" id="holderDiv' + i + '"></div>');
+		}
+		for (var i=0;i<data.length;i++){
+			$('#holderDiv' + i).append('<img id="holderImage' + i + '" src=""/>');
+			$('#holderImage'+i).load(imageLoaded(i));
+			$('#holderImage'+i).attr('src',data[i].image);
+		}
+		//	displayFrame(0);
+		currentIndex = 0;
+		imageCount = data.length;
+		displayFrame(0);		
+	}
+
+	function isAllDone(){
+	    for (var i = 0; i<data.length; i++) {
+	    	if (!($('#holderDiv'+i).hasClass('target') || $('#holderDiv'+i).hasClass('noise'))){
+	    		return false;
+	    	}
+	    }
+	    return true;
+	}
+
+	function updateSubmitButton() {
+	    if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE")
+	    {
+	        document.getElementById('submitButton').disabled = 'disabled';
+	        document.getElementById('submitButton').value = 'You must ACCEPT the HIT before you can submit the results.';
+	    }else
+	    {
+	    	if (isAllDone()){
+			    document.getElementById('submitButton').disabled = '';
+			    document.getElementById('submitButton').value = 'Submit';
+	        }else{
+	            document.getElementById('submitButton').disabled = 'disabled';
+	            document.getElementById('submitButton').value = 'Submit';
+	        }
+	    }
+	}
+
+	function confirmSubmit()
+	{
+
+		eventScript = eventScript + currentTime() + 'sm;';		
+	    // convert the answer to text
+	    var resultString = '';
+		for (var i = 0; i<data.length; i++) {
+			if ($('#holderDiv'+i).hasClass('target')){
+				resultString = resultString + '1';
+			}else{
+				resultString = resultString + '0';
+			}
+		}
+	    $('#answer').val(resultString);
+
+
+
+	    // caculate the accuracy
+	    correctCount = 0;
+	    for (var i = 0; i<data.length; i++) {
+	    	if ('truth' in data[i]){
+	    		var answer = $('#holderDiv'+i).hasClass('target');
+	  			if (answer== data[i].truth){
+	    			correctCount++;
+	    		}
+	    	}
+	    }
+
+		if (correctCount == testCount){
+		    $('#event').val(eventScript);
+			return true;
+		}else if (correctCount/testCount >= 0.8) {
+			eventScript = eventScript + currentTime() + 'ak' + correctCount/testCount + ';';
+			$('#event').val(eventScript);
+			return confirm("You accuracy seems low. Are you sure you want to submit? Click [Cancel] to refine the results.");
+		}else {
+			eventScript = eventScript + currentTime() + 'rj;';
+			alert("You accuracy is too low! You are not allowed to submit. Click [Cancel] to refine the results.");
+			return false;
+		}
+	}
+
+
+</script>
+
+
+
+
+<div id="instructionDiv" style="width: 890px; height: 50px; text-align: center; margin-left: auto; margin-right: auto; font-size:30px; font-weight:bold;">
+	Is this a <span style="color: #00F;">${question}</span>? 
+	<button onclick="start(); " id="startButton"  type="button"  >start</button>
+	<input type="submit" id="submitButton" value="Submit" disabled="disabled" autocomplete="off" onClick="return confirmSubmit()"  style="display: none;"/>
+	<input type="hidden" name="answer" id="answer" value="" autocomplete="off" />
+	<input type="hidden" name="event" id="event" value="" autocomplete="off" />
+</div>
+
+<div id="instrDiv" style="width: 890px; margin-left: auto; margin-right: auto; z-index: 10px; ">
+	<h3>Task</h3>
+	<ul>
+		<li>For each of the <span id="imageCount"></span> images, answer yes or no to the above question.</li>
+	</ul>
+	<h3>Usage</h3>
+	<img src="http://people.csail.mit.edu/jxiao/tmp/gigaSUN/keyboard.jpg" style="float : right; width: 45%; margin : 0 0 0px 10px;"/>
+	<ul>
+		<li>Keep the right arrow [&rarr;] key  (or [d] key) pressed down to move continuously from an image to the next. Release the key when you see an image for which the answer should be YES.</li>
+		<li>Use [space] key to toggle the answer to YES. The default answer is NO.</li>
+		<li>Use the left arrow [&larr;] key (or [a] key) to go back to the previously seen images, if you skipped an image accidentaly.</li>
+	</ul>
+	<h3>Submit</h3>
+	<ul>
+		<li>After you answer all the images, the [submit] button will be enabled.</li>
+		<li>If your acurracy is too low, it won't allow you to submit. You have to improve your answers first.</li>
+	</ul>	
+</div>
+
+
+<div id="loadingDiv" style="width: 890px; height: 430px; text-align: center;  margin-left: auto; margin-right: auto; display: none; ">
+	<br/><br/><br/><br/><br/><br/><br/><br/><br/>
+	Images are loading ...<br/><br/>
+	<img src="http://vision.cs.princeton.edu/web/splashScreenImage.gif"/>
+</div>
+
+
+<div id="contentDiv" style="width: 890px; height: 430px; text-align: center;  margin-left: auto; margin-right: auto; font-size: 13pt; display: none; ">
+</div>
+
+
+
+
+</body></html>

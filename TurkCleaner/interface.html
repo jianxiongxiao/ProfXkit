@@ -1,0 +1,571 @@
+<html><body>
+
+
+
+<script src="jquery-1.10.0.min.js" type="text/javascript"></script>
+<script src="data.js" type="text/javascript"></script>
+
+
+<!--
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js" ></script>
+<script type="text/javascript">
+	var data=${data};
+	var examples=${examples};
+	var definition='${definition}';
+</script>
+-->
+	
+<style>
+	div{
+		-webkit-user-select: none;
+		-moz-user-select: none; 
+	}
+	.target{
+		color: #0D0;
+	}
+	.target img{
+		border: 3px solid #0D0;
+	}
+	.noise{
+		color: #F00;
+	}
+	.noise img{
+		border: 3px solid #F00;
+	}
+	.target p:first-child{
+		display: none;
+	}
+	.target p:nth-child(2){
+		display: inline;
+	}
+	.noise p:first-child{
+		display: inline;
+	}
+	.noise p:nth-child(2){
+		display: none;
+	}
+	.none p:first-child{
+		display: none;
+	}
+	.none p:nth-child(2){
+		display: none;
+	}
+
+	.example {
+
+		display: inline-block;
+		text-align: center;
+		padding: 2px;
+	}
+	.example img{
+		border-width: 6px;
+		max-width: 120px;
+		height: 75px;
+	}	
+	.example p{
+		font-weight: normal; font-size: 12pt;
+	}
+
+
+	.focus { 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding-left: 12px;		
+   		padding-right: 12px;		
+   		padding-top: 0px;		
+   		padding-bottom: 0px;		
+		width: 400px; height: 450px;
+	}	
+	.focus1{ 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 6px;		
+		width: 100px; height: 100px;
+	}	
+	.focus2{ 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 4px;		
+		width: 50px;  height: 50px; 
+	}	
+	.focus3{ 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 2px;		
+		width: 25px;  height: 25px; 
+	}	
+
+	.focus img{ 
+		max-width: 376px;
+		max-height: 376px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;		
+		border-width: 12px; 
+	}	
+
+	.focus1 img{ 
+		max-width: 88px;
+		max-height: 88px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+		border-width: 6px; 
+	}	
+
+	.focus2 img{ 
+		max-width: 42px;
+		max-height: 42px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+		border-width: 4px; 
+	}	
+	.focus3 img{ 
+		max-width: 21px;
+		max-height: 21px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+		border-width: 2px; 
+	}	
+
+	.focus p{ 
+		font-weight: bolder; font-size: 28pt; 
+	}
+	.focus1 p{ 
+		display: none;
+		font-weight: normal; font-size: 16pt; 
+	}
+	.focus2 p{ 
+		display: none;		
+		font-weight: normal; font-size: 9pt; 
+	}
+	.focus3 p{ 
+		display: none;	
+		font-weight: normal; font-size: 6pt; 
+	}
+
+
+
+</style>
+
+
+
+
+
+<script type="text/javascript">
+	var maxNumExample = 25;
+
+	var currentIndex = -5;
+	var timerHandle;
+	var keyIsDown = false;
+	
+	var testCount = 0;
+	var correctCount = 0;
+
+	var eventScript = '';
+
+	function answerHit(){
+		if ($('#holderDiv'+currentIndex).hasClass('target')){
+			$('#holderDiv'+currentIndex).removeClass('target');
+			$('#holderDiv'+currentIndex).addClass('noise');
+		}else{
+			$('#holderDiv'+currentIndex).addClass('target');
+			$('#holderDiv'+currentIndex).removeClass('noise');
+		}
+	}
+
+	function currentTime(){
+		var d = new Date();
+		return d.getTime();
+	}
+
+	$(window).keydown(function(e){
+		e.preventDefault();
+		var key = e.which | e.keyCode;
+
+		eventScript = eventScript + currentTime() + 'up' + key + ';';
+
+		if ( !keyIsDown){
+		    if(key === 39 || key == 68){
+		    	keyIsDown = true;
+		    	if (currentIndex+1<data.length){
+						currentIndex = currentIndex + 1;
+						displayFrame(currentIndex); 
+				}
+				timerHandle =setInterval(function(){
+					if (currentIndex+1<data.length){
+						currentIndex = currentIndex + 1;
+						displayFrame(currentIndex); 
+					}else{
+						clearInterval(timerHandle);
+					}
+				},400);	    	
+		    }
+		    if(key === 37 || key == 65){
+		    	keyIsDown = true;
+				if (currentIndex-1>=0){
+						currentIndex = currentIndex - 1;
+						displayFrame(currentIndex); 
+				}		    	
+				timerHandle =setInterval(function(){
+					if (currentIndex-1>=0){
+						currentIndex = currentIndex - 1;
+						displayFrame(currentIndex); 
+					}else{
+						clearInterval(timerHandle);
+					}
+				},400);	    	
+		    }
+		}
+		updateSubmitButton();
+	});
+
+	$(window).keyup(function(e){
+		e.preventDefault();
+		var key = e.which | e.keyCode;
+
+		eventScript = eventScript + currentTime() + 'up' + key + ';';
+
+	    if(key === 32 ){
+	    	answerHit();
+	    }
+	    if(key === 37  || key == 65|| key === 39 || key == 68){
+	    	clearInterval(timerHandle);
+	    	keyIsDown = false;
+	    }
+	    updateSubmitButton();
+	});
+
+	function displayFrame(n){
+
+		for (var i=-4;i<data.length+4;++i){
+			$('#holderDiv'+i).hide();
+			$('#holderDiv'+i).removeClass('focus3');	
+			$('#holderDiv'+i).removeClass('focus2');	
+			$('#holderDiv'+i).removeClass('focus1');	
+			$('#holderDiv'+i).removeClass('focus');	
+		}
+
+		$('#holderDiv'+(n-4)).hide();
+		$('#holderDiv'+(n-3)).show();	//	$('#holderDiv'+(n-3)).width(25);	$('#holderDiv'+(n-3)).height(25);
+		$('#holderDiv'+(n-2)).show();	//	$('#holderDiv'+(n-2)).width(50);	$('#holderDiv'+(n-2)).height(50);
+		$('#holderDiv'+(n-1)).show();	//	$('#holderDiv'+(n-1)).width(100);	$('#holderDiv'+(n-1)).height(100);
+		$('#holderDiv'+n    ).show();	//	$('#holderDiv'+n    ).width(400);	$('#holderDiv'+n    ).height(400);
+		$('#holderDiv'+(n+1)).show();	//	$('#holderDiv'+(n+1)).width(100);	$('#holderDiv'+(n+1)).height(100);
+		$('#holderDiv'+(n+2)).show();	//	$('#holderDiv'+(n+2)).width(50);	$('#holderDiv'+(n+2)).height(50);
+		$('#holderDiv'+(n+3)).show();	//	$('#holderDiv'+(n+3)).width(25);	$('#holderDiv'+(n+3)).height(25);
+		$('#holderDiv'+(n+4)).hide();
+
+
+		$('#holderDiv'+(n-3)).addClass('focus3');	$('#holderDiv'+(n-3)).removeClass('focus2');	
+		$('#holderDiv'+(n-2)).addClass('focus2');	$('#holderDiv'+(n-2)).removeClass('focus1');  $('#holderDiv'+(n-2)).removeClass('focus3');	
+		$('#holderDiv'+(n-1)).addClass('focus1');	$('#holderDiv'+(n-1)).removeClass('focus');   $('#holderDiv'+(n-1)).removeClass('focus2');	
+		$('#holderDiv'+n    ).addClass('focus');	$('#holderDiv'+n    ).removeClass('focus1');
+		$('#holderDiv'+(n+1)).addClass('focus1');	$('#holderDiv'+(n+1)).removeClass('focus');   $('#holderDiv'+(n+1)).removeClass('focus2');	
+		$('#holderDiv'+(n+2)).addClass('focus2');	$('#holderDiv'+(n+2)).removeClass('focus1');  $('#holderDiv'+(n+2)).removeClass('focus3');	
+		$('#holderDiv'+(n+3)).addClass('focus3');	$('#holderDiv'+(n+3)).removeClass('focus2');	
+
+
+		if (!($('#holderDiv'+n).hasClass('target') || $('#holderDiv'+n).hasClass('noise') ) ){
+			$('#holderDiv'+n).addClass('noise');
+		}
+		$('#progressCNT').html((n+1)+'/'+data.length);
+	}
+
+	var hasFocus = false;
+	var instructionPage = true;
+	function start(){
+		hasFocus = true;
+		//$('#startButton').hide();
+		if (instructionPage){
+			instructionPage = false;
+			$('#startButton').html('Instruction');
+			$('#submitButton').show();
+			$('#progressDiv').show();
+
+			checkDisplay();
+
+			eventScript = eventScript + currentTime() + 'wk;';			
+		}else{
+			instructionPage = true;
+			$('#startButton').html('Back to work');
+			$('#submitButton').hide();
+			$('#progressDiv').hide();
+
+			$('#instrDiv').show();
+			$('#loadingDiv').hide();
+			$('#contentDiv').hide();			
+			eventScript = eventScript + currentTime() + 'in;';			
+		}
+	}
+	var loadedCount = 0;
+	function imageLoaded(n){
+		//console.log('id=' + n + ' count=' + loadedCount);
+		loadedCount = loadedCount + 1;
+		checkDisplay();
+
+		eventScript = eventScript + currentTime() + 'ld' + n + ';';
+	}
+
+
+	function checkDisplay(){
+		if (loadedCount < data.length && hasFocus){
+			$('#instrDiv').hide();
+			$('#loadingDiv').show();
+			$('#contentDiv').hide();
+		}
+		if (loadedCount== data.length && !hasFocus){
+			$('#instrDiv').show();
+			$('#loadingDiv').hide();
+			$('#contentDiv').hide();
+		}		
+		if (loadedCount== data.length && hasFocus){
+			$('#instrDiv').hide();
+			$('#loadingDiv').hide();
+			$('#contentDiv').show();
+		}
+	}
+
+	function gup( name )
+	{
+		name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+		var regexS = "[\\?&]"+name+"=([^&#]*)";
+		var regex = new RegExp( regexS );
+		var results = regex.exec( window.location.href );
+		if( results == null )
+			return "NO_VAL";
+		else
+			return results[1];
+	}
+	var workerId;
+	var assignmentId;
+	var hitId;
+	var gameId;
+
+
+
+	$(document).ready(function(){
+
+		if (definition!=''){
+			$('#definitionDiv').html('<p><b>Definition</b>: ' + definition + '.</p>');
+		}
+
+		$('#imageCount').html(data.length);
+		if (assignmentId != "ASSIGNMENT_ID_NOT_AVAILABLE"){
+			document.getElementById('submitButton').value = 'Submit (' + data.length + ' images left)';
+		}
+
+		$('#startButton').show();
+
+		var exampleStr = '';
+		exampleStr = exampleStr + '<div class="noise example"><p>No Single Object</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/delicatessen_6fb94e2e384ae28e189d4059d8dc8efd.jpg"></div>';
+		exampleStr = exampleStr + '<div class="noise example"><p>No Text Overlay</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/office_cubicles_0a63c4fed19394584c17655b66551afe.jpg"></div>';
+		exampleStr = exampleStr + '<div class="noise example"><p>No Drawing</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/office_cubicles_594262350a90f73e693d32f99cc2c01f.jpg"></div>';
+		exampleStr = exampleStr + '<div class="noise example"><p>No Screenshot</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/cybercafe_c443a65367506809a852d29ffa9847b9.jpg"></div>';
+		exampleStr = exampleStr + '<div class="noise example"><p>No Graphics</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/office_cubicles_00de42d92327b8f66ef7e0cddfa81f84.jpg"></div>';
+		exampleStr = exampleStr + '<div class="noise example"><p>No Bad Photo</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/cybercafe_2a150d58e415aad1eec95efc7cead821.jpg"></div>';
+		exampleStr = exampleStr + '<div class="noise example"><p>Not Only Logo</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/delicatessen_1f6af3b25603aa9c3ea8ef0fc82b6ac6.jpg"></div>';
+		exampleStr = exampleStr + '<div class="noise example"><p>No Magazine/Newspaper</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/cybercafe_c4754a383af732b49bc6912c1d18f7d7.jpg"></div>';
+
+		for (var i=0; i< Math.min(examples.length,maxNumExample-3);++i){
+			exampleStr = exampleStr + '<div class="';
+			if (examples[i].truth){
+				exampleStr = exampleStr + 'target';
+			}else{
+				exampleStr = exampleStr + 'noise';
+			}
+			exampleStr = exampleStr + ' example"><p>No</p><p>Yes</p><br/><img src="';
+			exampleStr = exampleStr + examples[i].image;
+			exampleStr = exampleStr + '" /></div>';
+		}
+
+		$('#exampleDiv').html(exampleStr);
+
+		workerId = gup('workerId');
+		assignmentId = gup('assignmentId');
+
+		if ( assignmentId == 'ASSIGNMENT_ID_NOT_AVAILABLE' ){
+			$("#startButton").html('accept the hit first before you can start');
+			$('#startButton').attr("disabled", "disabled");
+		}else{
+			$("#startButton").html('Start');
+			$('#startButton').removeAttr("disabled");
+			eventScript = eventScript + currentTime() + 'ac;';
+		}
+
+		hitId = gup('hitId');
+		gameId = gup('gameId');
+		loadData();
+
+	});
+
+	function loadData(){
+		for (var i = 0; i<data.length; i++) {
+			if ('truth' in data[i]){
+				testCount++;
+			}
+		}
+		for (var i=-4;i<0;i++){
+			$('#contentDiv').append('<div style="display: none;" id="holderDiv' + i + '"></div>');
+		}
+		for (var i=0;i<data.length;i++){
+			$('#contentDiv').append('<div style="display: none;" id="holderDiv' + i + '"><p>No</p><p>Yes</p></div>');
+		}
+		for (var i=data.length;i<data.length+4;i++){
+			$('#contentDiv').append('<div style="display: none;" id="holderDiv' + i + '"></div>');
+		}
+		for (var i=0;i<data.length;i++){
+			$('#holderDiv' + i).append('<img id="holderImage' + i + '" src=""/>');
+			$('#holderImage'+i).load(imageLoaded(i));
+			$('#holderImage'+i).attr('src',data[i].image);
+		}
+		//	displayFrame(0);
+		currentIndex = 0;
+		imageCount = data.length;
+		displayFrame(0);		
+	}
+
+	function getTodoCnt(){
+		var todoCnt = 0;
+	    for (var i = 0; i<data.length; i++) {
+	    	if (!($('#holderDiv'+i).hasClass('target') || $('#holderDiv'+i).hasClass('noise'))){
+	    		++todoCnt;
+	    	}
+	    }
+	    return todoCnt;
+	}
+
+	function updateSubmitButton() {
+	    if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE")
+	    {
+	        document.getElementById('submitButton').disabled = 'disabled';
+	        document.getElementById('submitButton').value = 'You must ACCEPT the HIT before you can submit the results.';
+	    }else
+	    {
+	    	var todoCnt = getTodoCnt();
+	    	if (todoCnt==0){
+			    document.getElementById('submitButton').disabled = '';
+			    document.getElementById('submitButton').value = 'Submit';
+	        }else{
+	            document.getElementById('submitButton').disabled = 'disabled';
+	            document.getElementById('submitButton').value = 'Submit (' + todoCnt + ' images left)';
+	        }
+	    }
+	}
+
+	function confirmSubmit()
+	{
+
+		eventScript = eventScript + currentTime() + 'sm;';		
+	    // convert the answer to text
+	    var resultString = '';
+		for (var i = 0; i<data.length; i++) {
+			if ($('#holderDiv'+i).hasClass('target')){
+				resultString = resultString + '1';
+			}else{
+				resultString = resultString + '0';
+			}
+		}
+	    $('#answer').val(resultString);
+
+
+
+	    // caculate the accuracy
+	    correctCount = 0;
+	    for (var i = 0; i<data.length; i++) {
+	    	if ('truth' in data[i]){
+	    		var answer = $('#holderDiv'+i).hasClass('target');
+	  			if (answer== data[i].truth){
+	    			correctCount++;
+	    		}
+	    	}
+	    }
+
+		if (correctCount/testCount >= 0.95){
+		    $('#event').val(eventScript);
+			return true;
+		}else if (correctCount/testCount >= 0.90) {
+			eventScript = eventScript + currentTime() + 'ak' + correctCount/testCount + ';';
+			$('#event').val(eventScript);
+			return confirm("You accuracy seems low. Are you sure you want to submit now? Click [Cancel] to go back and refine the results.");
+		}else {
+			eventScript = eventScript + currentTime() + 'rj;';
+			alert("You accuracy is too low! You are not allowed to submit. Click [Cancel] to refine the results.");
+			return false;
+		}
+	}
+
+	function leftButtonFun(){
+		currentIndex = 0;
+		displayFrame(currentIndex); 
+		eventScript = eventScript + currentTime() + 'be;';
+	}
+
+	function rightButtonFun(){
+		currentIndex = data.length-1;
+		displayFrame(currentIndex); 
+		eventScript = eventScript + currentTime() + 'en;';
+		updateSubmitButton();
+	}
+</script>
+
+
+
+
+<div id="instructionDiv" style="width: 822px; height: 30px; text-align: center; margin-left: auto; margin-right: auto; font-size:30px; font-weight:bold;">
+	<button onclick="start(); " id="startButton"  type="button"  style="display: none;">Start</button>&nbsp;
+	Is this <span style="color: #00F;">${question}</span>?&nbsp;
+	<input type="submit" id="submitButton" value="Submit" disabled="disabled" autocomplete="off" onClick="return confirmSubmit()"  style="display: none;"/>
+	<input type="hidden" name="answer" id="answer" value="" autocomplete="off" />
+	<input type="hidden" name="event" id="event" value="" autocomplete="off" />
+</div>
+<div id="definitionDiv" style="width: 822px; margin-left: auto; margin-right: auto; z-index: 10px; text-align: center; ">&nbsp;</div>
+
+<div id="loadingDiv" style="width: 822px; height: 440px; text-align: center;  margin-left: auto; margin-right: auto; display: none; ">
+	<br/><br/><br/><br/><br/><br/><br/><br/><br/>
+	Images are loading ...<br/><br/>
+	<img src="http://vision.cs.princeton.edu/web/splashScreenImage.gif"/>
+</div>
+
+
+<div id="contentDiv" style="width: 822px; height: 440px; text-align: center;  margin-left: auto; margin-right: auto; font-size: 13pt; display: none; ">
+</div>
+
+<div id="progressDiv" style="text-align: center; display: none; padding-top: 45px;">
+	<button type="button" onclick="leftButtonFun(); " id="leftButton" ><image src="http://gigasun.csail.mit.edu/instruction/left.png"/></button> &nbsp;
+	<span id="progressCNT" style="font-size:14px; font-weight: normal;">N/N</span> &nbsp;
+	<button type="button" onclick="rightButtonFun(); " id="rightButton"><image src="http://gigasun.csail.mit.edu/instruction/right.png"/></button>
+</div>
+
+<div id="instrDiv" style="width: 822px; margin-left: auto; margin-right: auto; z-index: 10px; ">
+	<h3 style="margin-top: 0; margin-bottom: 0;">Task</h3>
+	<ul>
+		<p>For each of the <span id="imageCount" style="font-weight: bold; color: #00F;">N</span> images, answer yes or no to the above question. Only answer <b style="font-weight: bold; color: #0B0;">Yes</b> to <b style="font-weight: bold; color: #00F;">real photos</b>. Always answer <b style="font-weight: bold; color: #F00;">No</b> to  <b style="font-weight: bold; color: #F00;">cartoon</b>, <b style="font-weight: bold; color: #F00;">drawing</b>, <b style="font-weight: bold; color: #F00;">CG rendering</b>, or real photos with a <b style="font-weight: bold; color: #F00;">large text overlay</b> on the photo. Here are some examples:</p>
+	</ul>
+
+	<div id="exampleDiv" style="text-align: center; margin-top: 0;">
+	</div>
+
+	<h3 style="margin-top: 0; margin-bottom: 0;">Usage</h3>
+	<img src="http://gigasun.csail.mit.edu/instruction/keyboard_small.jpg" style="float : right; width: 45%; margin : 0 0 0px 10px;"/>
+	<ul>
+		<li>Keep the right arrow [&rarr;] key (or [d] key) pressed down to move continuously from an image to the next. Release the key when you see an image for which the answer should be YES.</li>
+		<li>Use [space] key to toggle the answer to YES. The default answer is NO.</li>
+		<li>Use the left arrow [&larr;] key (or [a] key) to go back to the previously seen images, if you skipped an image accidentaly.</li>
+	</ul>
+	<h3 style="margin-top: 0; margin-bottom: 0;">Submit</h3>
+	<ul>
+		<li>After you answer all the images, the [submit] button will be enabled.</li>
+		<li><b style="color: #00F;">If your accuracy is too low, it won't allow you to submit. You will have to improve your answers first.</b></li>
+	</ul>	
+
+	<p style="font-size: 8pt; color: #999;">By making judgments about these images, you are participating in a study being performed by XXX. If you have questions about this research, please contact XXX at XXX. Your participation in this research is voluntary. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.</p>
+</div>
+
+

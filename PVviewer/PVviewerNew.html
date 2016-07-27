@@ -1,0 +1,277 @@
+<html>
+<head>
+<title>Princeton Vision Viewer</title>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<style type="text/css">
+html, body {
+    margin:0;
+    padding:0;
+    height:100%; 
+} 
+#canvas3D { 
+    position:absolute; 
+    display:block;
+    background:#c00; 
+    height:100%; 
+    width:100%;
+    border: none;
+    cursor: default; 
+}
+</style>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+    varying vec2 vTextureCoord;
+    varying vec4 vColor;
+    uniform sampler2D uSampler;
+    void main(void) {
+        if (vColor[3] == 0.0){
+            gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        }else{
+            gl_FragColor = vColor;
+        }
+    }
+</script>
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec2 aTextureCoord;
+    attribute vec4 aVertexColor;
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform float uPointSize;
+    varying vec2 vTextureCoord;
+    varying vec4 vColor;
+    void main(void) {
+        gl_PointSize = uPointSize;
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vTextureCoord = aTextureCoord;
+        vColor = aVertexColor;
+    }
+</script>
+
+
+<script>
+	var fileURL;
+    var gl;
+
+
+	var internalColors = ['#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c', '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5', '#8c564b', '#c49c94', '#e377c2', '#f7b6d2', '#7f7f7f', '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5', '#8dd3c7', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f', '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#a65628', '#f781bf', '#999999', '#621e15', '#e59076', '#128dcd', '#083c52', '#64c5f2', '#61afaf', '#0f7369', '#9c9da1', '#365e96', '#983334', '#77973d', '#5d437c', '#36869f', '#d1702f', '#8197c5', '#c47f80', '#acc484', '#9887b0', '#2d588a', '#58954c', '#e9a044', '#c12f32', '#723e77', '#7d807f', '#9c9ede', '#7375b5', '#4a5584', '#cedb9c', '#b5cf6b', '#8ca252', '#637939', '#e7cb94', '#e7ba52', '#bd9e39', '#8c6d31', '#e7969c', '#d6616b', '#ad494a', '#843c39', '#de9ed6', '#ce6dbd', '#a55194', '#7b4173', '#000000', '#0000FF'];
+
+    // Get Url Parameters
+    function gup(name) {
+        name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+        var regexS = "[\\?&]"+name+"=([^&#]*)";
+        var regex = new RegExp( regexS );
+        var results = regex.exec( window.location.href );
+        if( results == null )
+            return "";
+        else
+        	return results[1];
+    }
+    // WebGL functions
+    function initGL(canvas) {
+        try {
+            gl = canvas.getContext("experimental-webgl");
+        } catch (e) {
+        }
+        if (!gl) {
+            alert("Could not initialise WebGL, sorry :-(. Check your browser's WebGL support.");
+        }
+    }
+    function getShader(gl, id) {
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript) {
+            return null;
+        }
+        var str = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            if (k.nodeType == 3) {
+                str += k.textContent;
+            }
+            k = k.nextSibling;
+        }
+        var shader;
+        if (shaderScript.type == "x-shader/x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } else if (shaderScript.type == "x-shader/x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } else {
+            return null;
+        }
+        gl.shaderSource(shader, str);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+        return shader;
+    }
+    function initShaders() {
+        var fragmentShader = getShader(gl, "shader-fs");
+        var vertexShader = getShader(gl, "shader-vs");
+        shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            alert("Could not initialise shaders");
+        }
+        gl.useProgram(shaderProgram);
+        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+        shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+        gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute)
+        shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+        gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+        shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
+        shaderProgram.pointSizeUniform = gl.getUniformLocation(shaderProgram, "uPointSize");
+
+        // initialize no color placeholder buffer        
+        noColorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, noColorBuffer);
+        noColorBuffer.itemSize = 4;
+        noColorBuffer.numItems = maxVertexNumber;
+
+
+        var colors_buffer = new ArrayBuffer(4*4*noColorBuffer.numItems);
+        var colors_view   = new Float32Array(colors_buffer);
+
+        var i =0;
+        while (i<4*noColorBuffer.numItems){
+            colors_view[i++] = 1.0;
+            colors_view[i++] = 1.0;
+            colors_view[i++] = 1.0;
+            colors_view[i++] = 0.0;
+        }
+        gl.bufferData(gl.ARRAY_BUFFER, colors_view, gl.STATIC_DRAW);
+
+
+
+        //var colors = new Array();
+        //for (var i=0;i<noColorBuffer.numItems; ++i){
+        //    colors.push(1.0);
+        //    colors.push(1.0);
+        //    colors.push(1.0);
+        //    colors.push(0.0);
+        //}
+        //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        // initialize no texture placeholder buffer        
+        noTextureBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, noTextureBuffer);
+        noTextureBuffer.itemSize = 2;
+        noTextureBuffer.numItems = maxVertexNumber;
+
+
+        var textureCoord_buffer = new ArrayBuffer(4*2*noTextureBuffer.numItems); // typed array all pre-initialized to 0
+        var textureCoord_view   = new Float32Array(textureCoord_buffer);
+        //for( var i =0; i<noColorBuffer.numItems; ++i){
+        //    textureCoord_view[i] = 0.0;
+        //}
+        gl.bufferData(gl.ARRAY_BUFFER, textureCoord_view, gl.STATIC_DRAW);        
+
+
+        // creat a dummy texture
+
+        dummy_texture = gl.createTexture();
+        dummy_texture.image = new Image();
+        dummy_texture.image.onload = function () {
+            gl.bindTexture(gl.TEXTURE_2D, dummy_texture);
+            //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, dummy_texture.image);
+            //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);        
+            gl.bindTexture(gl.TEXTURE_2D, null);  
+            dummy_texture.loaded = true;    
+        };
+        dummy_texture.image.src = "http://sunannotator.csail.mit.edu/dummytexture.jpg";
+
+        cameraColorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, cameraColorBuffer);
+        var colorCamera = [0.3,0.3,0.3,1.0,0.3,0.3,0.3,1.0,0.3,0.3,0.3,1.0,0.3,0.3,0.3,1.0,0.3,0.3,0.3,1.0];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorCamera), gl.STATIC_DRAW);
+        cameraColorBuffer.itemSize = 4;
+        
+        for (var i=0; i<labelColors.length; i++){
+            labelColorBuffer[i] = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, labelColorBuffer[i]);
+            var color = labelColors[i];
+
+            var unpackedColors_buffer = new ArrayBuffer(4*4*maxVertexNumber);
+            var unpackedColors_view   = new Float32Array(unpackedColors_buffer);
+            var j =0;
+            while (j<4*maxVertexNumber){
+                unpackedColors_view[j++] = color[0];
+                unpackedColors_view[j++] = color[1];
+                unpackedColors_view[j++] = color[2];
+                unpackedColors_view[j++] = color[3];
+            }
+            gl.bufferData(gl.ARRAY_BUFFER, unpackedColors_view, gl.STATIC_DRAW);
+
+            //var unpackedColors = [];
+            //for (var j=0; j < maxVertexNumber; j++) {
+            //    unpackedColors = unpackedColors.concat(color);
+            //}
+            //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(unpackedColors), gl.STATIC_DRAW);
+
+            labelColorBuffer[i].itemSize = 4;
+        }
+                
+        gl.enable(0x8642);
+    }
+    function mvPushMatrix() {
+        var copy = mat4.create();
+        mat4.set(mvMatrix, copy);
+        mvMatrixStack.push(copy);
+    }
+    function mvPopMatrix() {
+        if (mvMatrixStack.length == 0) {
+            throw "Invalid popMatrix!";
+        }
+        mvMatrix = mvMatrixStack.pop();
+    }
+    function setMatrixUniforms() {
+        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    }
+    
+    // handle window resize
+    function winSizeChange() {
+        canvas.width = $(window).width()-220;
+        canvas.height = $(window).height();            
+        //render again
+        render();
+       
+        $("#accordion").accordion("resize");
+        var heightDiv = $(window).height()-471; 
+        if (heightDiv<20){
+            heightDiv=20;
+        }
+        $("#fileDiv").height(heightDiv);
+        $("#cameraDiv").height(heightDiv);
+        $("#objectDiv").height(heightDiv);
+        $("#instructionDiv").height(heightDiv);             
+    }
+    var resizeTimer;
+    $(window).resize(function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(winSizeChange, 100);
+    });
+
+
+	$(document).ready(function() {
+		fileURL = gup('url');
+
+	});
+</script>
+</head>
+<body>
+
+<canvas id="canvas3D" oncontextmenu="return false;"></canvas>
+
+</body>
+</html>

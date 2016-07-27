@@ -1,0 +1,23 @@
+#VRML V2.0 utf8
+Shape{ geometry IndexedFaceSet{
+coord Coordinate{point[
+0.000000 0.000000 0.000000,
+0.000000 74.300000 0.000000,
+267.900000 74.300000 0.000000,
+267.900000 0.000000 0.000000,
+]}
+coordIndex[
+0,1,2,3,-1,
+]
+texCoord TextureCoordinate{point[
+0.000000 0.000000
+0.000000 1.000000
+1.000000 1.000000
+1.000000 0.000000
+]}
+texCoordIndex[
+0 1 2 3 -1
+]
+}
+appearance Appearance{material Material{diffuseColor 1 1 1 }  texture ImageTexture { url "PrincetonVisionGroup_logo.png" } }
+}

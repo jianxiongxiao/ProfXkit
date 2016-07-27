@@ -1,0 +1,9 @@
+To compile the code, following libraries are needed:
+1. OpenNI 1.5.4 (included)
+2. OpenCV
+
+use g++ to compile:
+g++ -o convert readoni_cv.cpp -lOpenNI -I/usr/include/ni `pkg-config --cflags --libs opencv`
+
+To execute, type
+./convert /PATH/TO/ONI/FILE

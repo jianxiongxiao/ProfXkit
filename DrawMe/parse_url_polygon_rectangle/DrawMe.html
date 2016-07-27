@@ -1,0 +1,1030 @@
+<html>
+<head>
+    <title>DrawMe</title>
+</head>
+<body id="body" style="overflow: auto;">
+<!--[if lte IE 9]>
+<script type="text/javascript">
+
+// Google encanvas class for IE under 9
+// Copyright 2006 Google Inc.
+// Licensed under the Apache License, Version 2.0 (the "License");
+document.createElement("canvas").getContext||(function(){var s=Math,j=s.round,F=s.sin,G=s.cos,V=s.abs,W=s.sqrt,k=10,v=k/2;function X(){return this.context_||(this.context_=new H(this))}var L=Array.prototype.slice;function Y(b,a){var c=L.call(arguments,2);return function(){return b.apply(a,c.concat(L.call(arguments)))}}var M={init:function(b){if(/MSIE/.test(navigator.userAgent)&&!window.opera){var a=b||document;a.createElement("canvas");a.attachEvent("onreadystatechange",Y(this.init_,this,a))}},init_:function(b){b.namespaces.g_vml_||
+b.namespaces.add("g_vml_","urn:schemas-microsoft-com:vml","#default#VML");b.namespaces.g_o_||b.namespaces.add("g_o_","urn:schemas-microsoft-com:office:office","#default#VML");if(!b.styleSheets.ex_canvas_){var a=b.createStyleSheet();a.owningElement.id="ex_canvas_";a.cssText="canvas{display:inline-block;overflow:hidden;text-align:left;width:300px;height:150px}g_vml_\\:*{behavior:url(#default#VML)}g_o_\\:*{behavior:url(#default#VML)}"}var c=b.getElementsByTagName("canvas"),d=0;for(;d<c.length;d++)this.initElement(c[d])},
+initElement:function(b){if(!b.getContext){b.getContext=X;b.innerHTML="";b.attachEvent("onpropertychange",Z);b.attachEvent("onresize",$);var a=b.attributes;if(a.width&&a.width.specified)b.style.width=a.width.nodeValue+"px";else b.width=b.clientWidth;if(a.height&&a.height.specified)b.style.height=a.height.nodeValue+"px";else b.height=b.clientHeight}return b}};function Z(b){var a=b.srcElement;switch(b.propertyName){case "width":a.style.width=a.attributes.width.nodeValue+"px";a.getContext().clearRect();
+break;case "height":a.style.height=a.attributes.height.nodeValue+"px";a.getContext().clearRect();break}}function $(b){var a=b.srcElement;if(a.firstChild){a.firstChild.style.width=a.clientWidth+"px";a.firstChild.style.height=a.clientHeight+"px"}}M.init();var N=[],B=0;for(;B<16;B++){var C=0;for(;C<16;C++)N[B*16+C]=B.toString(16)+C.toString(16)}function I(){return[[1,0,0],[0,1,0],[0,0,1]]}function y(b,a){var c=I(),d=0;for(;d<3;d++){var f=0;for(;f<3;f++){var h=0,g=0;for(;g<3;g++)h+=b[d][g]*a[g][f];c[d][f]=
+h}}return c}function O(b,a){a.fillStyle=b.fillStyle;a.lineCap=b.lineCap;a.lineJoin=b.lineJoin;a.lineWidth=b.lineWidth;a.miterLimit=b.miterLimit;a.shadowBlur=b.shadowBlur;a.shadowColor=b.shadowColor;a.shadowOffsetX=b.shadowOffsetX;a.shadowOffsetY=b.shadowOffsetY;a.strokeStyle=b.strokeStyle;a.globalAlpha=b.globalAlpha;a.arcScaleX_=b.arcScaleX_;a.arcScaleY_=b.arcScaleY_;a.lineScale_=b.lineScale_}function P(b){var a,c=1;b=String(b);if(b.substring(0,3)=="rgb"){var d=b.indexOf("(",3),f=b.indexOf(")",d+
+1),h=b.substring(d+1,f).split(",");a="#";var g=0;for(;g<3;g++)a+=N[Number(h[g])];if(h.length==4&&b.substr(3,1)=="a")c=h[3]}else a=b;return{color:a,alpha:c}}function aa(b){switch(b){case "butt":return"flat";case "round":return"round";case "square":default:return"square"}}function H(b){this.m_=I();this.mStack_=[];this.aStack_=[];this.currentPath_=[];this.fillStyle=this.strokeStyle="#000";this.lineWidth=1;this.lineJoin="miter";this.lineCap="butt";this.miterLimit=k*1;this.globalAlpha=1;this.canvas=b;
+var a=b.ownerDocument.createElement("div");a.style.width=b.clientWidth+"px";a.style.height=b.clientHeight+"px";a.style.overflow="hidden";a.style.position="absolute";b.appendChild(a);this.element_=a;this.lineScale_=this.arcScaleY_=this.arcScaleX_=1}var i=H.prototype;i.clearRect=function(){this.element_.innerHTML=""};i.beginPath=function(){this.currentPath_=[]};i.moveTo=function(b,a){var c=this.getCoords_(b,a);this.currentPath_.push({type:"moveTo",x:c.x,y:c.y});this.currentX_=c.x;this.currentY_=c.y};
+i.lineTo=function(b,a){var c=this.getCoords_(b,a);this.currentPath_.push({type:"lineTo",x:c.x,y:c.y});this.currentX_=c.x;this.currentY_=c.y};i.bezierCurveTo=function(b,a,c,d,f,h){var g=this.getCoords_(f,h),l=this.getCoords_(b,a),e=this.getCoords_(c,d);Q(this,l,e,g)};function Q(b,a,c,d){b.currentPath_.push({type:"bezierCurveTo",cp1x:a.x,cp1y:a.y,cp2x:c.x,cp2y:c.y,x:d.x,y:d.y});b.currentX_=d.x;b.currentY_=d.y}i.quadraticCurveTo=function(b,a,c,d){var f=this.getCoords_(b,a),h=this.getCoords_(c,d),g={x:this.currentX_+
+0.6666666666666666*(f.x-this.currentX_),y:this.currentY_+0.6666666666666666*(f.y-this.currentY_)};Q(this,g,{x:g.x+(h.x-this.currentX_)/3,y:g.y+(h.y-this.currentY_)/3},h)};i.arc=function(b,a,c,d,f,h){c*=k;var g=h?"at":"wa",l=b+G(d)*c-v,e=a+F(d)*c-v,m=b+G(f)*c-v,r=a+F(f)*c-v;if(l==m&&!h)l+=0.125;var n=this.getCoords_(b,a),o=this.getCoords_(l,e),q=this.getCoords_(m,r);this.currentPath_.push({type:g,x:n.x,y:n.y,radius:c,xStart:o.x,yStart:o.y,xEnd:q.x,yEnd:q.y})};i.rect=function(b,a,c,d){this.moveTo(b,
+a);this.lineTo(b+c,a);this.lineTo(b+c,a+d);this.lineTo(b,a+d);this.closePath()};i.strokeRect=function(b,a,c,d){var f=this.currentPath_;this.beginPath();this.moveTo(b,a);this.lineTo(b+c,a);this.lineTo(b+c,a+d);this.lineTo(b,a+d);this.closePath();this.stroke();this.currentPath_=f};i.fillRect=function(b,a,c,d){var f=this.currentPath_;this.beginPath();this.moveTo(b,a);this.lineTo(b+c,a);this.lineTo(b+c,a+d);this.lineTo(b,a+d);this.closePath();this.fill();this.currentPath_=f};i.createLinearGradient=function(b,
+a,c,d){var f=new D("gradient");f.x0_=b;f.y0_=a;f.x1_=c;f.y1_=d;return f};i.createRadialGradient=function(b,a,c,d,f,h){var g=new D("gradientradial");g.x0_=b;g.y0_=a;g.r0_=c;g.x1_=d;g.y1_=f;g.r1_=h;return g};i.drawImage=function(b){var a,c,d,f,h,g,l,e,m=b.runtimeStyle.width,r=b.runtimeStyle.height;b.runtimeStyle.width="auto";b.runtimeStyle.height="auto";var n=b.width,o=b.height;b.runtimeStyle.width=m;b.runtimeStyle.height=r;if(arguments.length==3){a=arguments[1];c=arguments[2];h=g=0;l=d=n;e=f=o}else if(arguments.length==
+5){a=arguments[1];c=arguments[2];d=arguments[3];f=arguments[4];h=g=0;l=n;e=o}else if(arguments.length==9){h=arguments[1];g=arguments[2];l=arguments[3];e=arguments[4];a=arguments[5];c=arguments[6];d=arguments[7];f=arguments[8]}else throw Error("Invalid number of arguments");var q=this.getCoords_(a,c),t=[];t.push(" <g_vml_:group",' coordsize="',k*10,",",k*10,'"',' coordorigin="0,0"',' style="width:',10,"px;height:",10,"px;position:absolute;");if(this.m_[0][0]!=1||this.m_[0][1]){var E=[];E.push("M11=",
+this.m_[0][0],",","M12=",this.m_[1][0],",","M21=",this.m_[0][1],",","M22=",this.m_[1][1],",","Dx=",j(q.x/k),",","Dy=",j(q.y/k),"");var p=q,z=this.getCoords_(a+d,c),w=this.getCoords_(a,c+f),x=this.getCoords_(a+d,c+f);p.x=s.max(p.x,z.x,w.x,x.x);p.y=s.max(p.y,z.y,w.y,x.y);t.push("padding:0 ",j(p.x/k),"px ",j(p.y/k),"px 0;filter:progid:DXImageTransform.Microsoft.Matrix(",E.join(""),", sizingmethod='clip');")}else t.push("top:",j(q.y/k),"px;left:",j(q.x/k),"px;");t.push(' ">','<g_vml_:image src="',b.src,
+'"',' style="width:',k*d,"px;"," height:",k*f,'px;"',' cropleft="',h/n,'"',' croptop="',g/o,'"',' cropright="',(n-h-l)/n,'"',' cropbottom="',(o-g-e)/o,'"'," />","</g_vml_:group>");this.element_.insertAdjacentHTML("BeforeEnd",t.join(""))};i.stroke=function(b){var a=[],c=P(b?this.fillStyle:this.strokeStyle),d=c.color,f=c.alpha*this.globalAlpha;a.push("<g_vml_:shape",' filled="',!!b,'"',' style="position:absolute;width:',10,"px;height:",10,'px;"',' coordorigin="0 0" coordsize="',k*10," ",k*10,'"',' stroked="',
+!b,'"',' path="');var h={x:null,y:null},g={x:null,y:null},l=0;for(;l<this.currentPath_.length;l++){var e=this.currentPath_[l];switch(e.type){case "moveTo":a.push(" m ",j(e.x),",",j(e.y));break;case "lineTo":a.push(" l ",j(e.x),",",j(e.y));break;case "close":a.push(" x ");e=null;break;case "bezierCurveTo":a.push(" c ",j(e.cp1x),",",j(e.cp1y),",",j(e.cp2x),",",j(e.cp2y),",",j(e.x),",",j(e.y));break;case "at":case "wa":a.push(" ",e.type," ",j(e.x-this.arcScaleX_*e.radius),",",j(e.y-this.arcScaleY_*e.radius),
+" ",j(e.x+this.arcScaleX_*e.radius),",",j(e.y+this.arcScaleY_*e.radius)," ",j(e.xStart),",",j(e.yStart)," ",j(e.xEnd),",",j(e.yEnd));break}if(e){if(h.x==null||e.x<h.x)h.x=e.x;if(g.x==null||e.x>g.x)g.x=e.x;if(h.y==null||e.y<h.y)h.y=e.y;if(g.y==null||e.y>g.y)g.y=e.y}}a.push(' ">');if(b)if(typeof this.fillStyle=="object"){var m=this.fillStyle,r=0,n={x:0,y:0},o=0,q=1;if(m.type_=="gradient"){var t=m.x1_/this.arcScaleX_,E=m.y1_/this.arcScaleY_,p=this.getCoords_(m.x0_/this.arcScaleX_,m.y0_/this.arcScaleY_),
+z=this.getCoords_(t,E);r=Math.atan2(z.x-p.x,z.y-p.y)*180/Math.PI;if(r<0)r+=360;if(r<1.0E-6)r=0}else{var p=this.getCoords_(m.x0_,m.y0_),w=g.x-h.x,x=g.y-h.y;n={x:(p.x-h.x)/w,y:(p.y-h.y)/x};w/=this.arcScaleX_*k;x/=this.arcScaleY_*k;var R=s.max(w,x);o=2*m.r0_/R;q=2*m.r1_/R-o}var u=m.colors_;u.sort(function(ba,ca){return ba.offset-ca.offset});var J=u.length,da=u[0].color,ea=u[J-1].color,fa=u[0].alpha*this.globalAlpha,ga=u[J-1].alpha*this.globalAlpha,S=[],l=0;for(;l<J;l++){var T=u[l];S.push(T.offset*q+
+o+" "+T.color)}a.push('<g_vml_:fill type="',m.type_,'"',' method="none" focus="100%"',' color="',da,'"',' color2="',ea,'"',' colors="',S.join(","),'"',' opacity="',ga,'"',' g_o_:opacity2="',fa,'"',' angle="',r,'"',' focusposition="',n.x,",",n.y,'" />')}else a.push('<g_vml_:fill color="',d,'" opacity="',f,'" />');else{var K=this.lineScale_*this.lineWidth;if(K<1)f*=K;a.push("<g_vml_:stroke",' opacity="',f,'"',' joinstyle="',this.lineJoin,'"',' miterlimit="',this.miterLimit,'"',' endcap="',aa(this.lineCap),
+'"',' weight="',K,'px"',' color="',d,'" />')}a.push("</g_vml_:shape>");this.element_.insertAdjacentHTML("beforeEnd",a.join(""))};i.fill=function(){this.stroke(true)};i.closePath=function(){this.currentPath_.push({type:"close"})};i.getCoords_=function(b,a){var c=this.m_;return{x:k*(b*c[0][0]+a*c[1][0]+c[2][0])-v,y:k*(b*c[0][1]+a*c[1][1]+c[2][1])-v}};i.save=function(){var b={};O(this,b);this.aStack_.push(b);this.mStack_.push(this.m_);this.m_=y(I(),this.m_)};i.restore=function(){O(this.aStack_.pop(),
+this);this.m_=this.mStack_.pop()};function ha(b){var a=0;for(;a<3;a++){var c=0;for(;c<2;c++)if(!isFinite(b[a][c])||isNaN(b[a][c]))return false}return true}function A(b,a,c){if(!!ha(a)){b.m_=a;if(c)b.lineScale_=W(V(a[0][0]*a[1][1]-a[0][1]*a[1][0]))}}i.translate=function(b,a){A(this,y([[1,0,0],[0,1,0],[b,a,1]],this.m_),false)};i.rotate=function(b){var a=G(b),c=F(b);A(this,y([[a,c,0],[-c,a,0],[0,0,1]],this.m_),false)};i.scale=function(b,a){this.arcScaleX_*=b;this.arcScaleY_*=a;A(this,y([[b,0,0],[0,a,
+0],[0,0,1]],this.m_),true)};i.transform=function(b,a,c,d,f,h){A(this,y([[b,a,0],[c,d,0],[f,h,1]],this.m_),true)};i.setTransform=function(b,a,c,d,f,h){A(this,[[b,a,0],[c,d,0],[f,h,1]],true)};i.clip=function(){};i.arcTo=function(){};i.createPattern=function(){return new U};function D(b){this.type_=b;this.r1_=this.y1_=this.x1_=this.r0_=this.y0_=this.x0_=0;this.colors_=[]}D.prototype.addColorStop=function(b,a){a=P(a);this.colors_.push({offset:b,color:a.color,alpha:a.alpha})};function U(){}G_vmlCanvasManager=
+M;CanvasRenderingContext2D=H;CanvasGradient=D;CanvasPattern=U})();</script>
+<![endif]-->
+
+<!-- some common drawing functions -->
+<script type="text/javascript">
+function DrawLineSegment(id, from_x, from_y, to_x, to_y, color) {
+	var canvas = document.getElementById(id);
+	if (canvas.getContext) {
+		var ctx = canvas.getContext('2d');
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 4;
+		ctx.lineCap = 'round';
+		ctx.beginPath();
+		ctx.moveTo(from_x, from_y);
+		ctx.lineTo(to_x, to_y);
+		ctx.closePath();
+		ctx.stroke();
+	}
+};
+
+function DrawRectangle(id, from_x, from_y, to_x, to_y, color) {
+	var canvas = document.getElementById(id);
+	if (canvas.getContext) {
+		var ctx = canvas.getContext('2d');
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 4;
+		ctx.lineCap = 'round';
+		ctx.strokeRect(Math.min(from_x,to_x),Math.min(from_y,to_y),Math.abs(from_x-to_x),Math.abs(from_y-to_y));
+	}
+};
+
+
+function DrawCtrlPoint(id, x, y, color, radius) {
+	var canvas = document.getElementById(id);
+	if (canvas.getContext) {
+		var ctx = canvas.getContext('2d');
+		ctx.strokeStyle = 'white';
+		ctx.fillStyle = '#00ff00';
+		ctx.lineWidth = radius / 2;
+		ctx.beginPath();
+		ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+		ctx.closePath();
+		ctx.fill();
+		ctx.beginPath();
+		ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+		ctx.closePath();
+		ctx.stroke();
+	}
+};
+
+function DrawPolygon(id, X, Y, color, scale) {
+	var canvas = document.getElementById(id);
+	if (canvas.getContext) {
+		var ctx = canvas.getContext('2d');
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 4;
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.beginPath();
+		ctx.moveTo(scale * X[0], scale * Y[0]);
+		for (i = 1; i < X.length; i++) {
+			ctx.lineTo(scale * X[i], scale * Y[i]);
+		}
+		ctx.closePath();
+		ctx.stroke();
+	}
+};
+
+function FillPolygon(id, X, Y, color, scale) {
+	var canvas = document.getElementById(id);
+	if (canvas.getContext) {
+		var ctx = canvas.getContext('2d');
+		ctx.strokeStyle = '#0000ff';
+		ctx.fillStyle = color;
+		ctx.lineWidth = 4;
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.beginPath();
+		ctx.moveTo(scale * X[0], scale * Y[0]);
+		for (i = 1; i < X.length; i++) {
+			ctx.lineTo(scale * X[i], scale * Y[i]);
+		}
+		ctx.closePath();
+		ctx.fill();
+		ctx.stroke();
+	}
+};
+
+function ClearCanvas(id, canvas_w, canvas_h) {
+	var canvas = document.getElementById(id);
+	if (canvas.getContext) {
+		var ctx = canvas.getContext('2d');
+		ctx.clearRect(0, 0, canvas_w, canvas_h);
+	}
+
+};
+
+</script>
+
+<!-- annotation -->
+<script type="text/javascript">
+// annotation class: Keeps track of all information related to an individual annotation.  
+function annotation(anno_id) {
+
+	//label data storage
+	this.obj_name = '';
+	this.pts_x = new Array();
+	this.pts_y = new Array();
+	this.isRectangle = 1;
+	this.anno_id = anno_id;
+
+	this.is_selected = 0;
+	this.lastx = -1;
+	this.lasty = -1;
+	this.selectedControlPoint = -1;
+
+	this.GetAnnoID = function () {
+		return this.anno_id;
+	};
+
+	// Draws first control point of a new polygon.
+	this.CreatePolygon = function (x, y) {
+		var im_ratio = main_image.GetImRatio();
+		x = Math.round(x / im_ratio);
+		y = Math.round(y / im_ratio);
+
+		this.pts_x.push(x);
+		this.pts_y.push(y);
+
+		DrawCtrlPoint('myCanvas_fg', Math.round(x * im_ratio), Math.round(y * im_ratio), '#00ff00', 6);
+
+		this.lastx = x;
+		this.lasty = y;
+	};
+
+	// Adds a new control point to the polygon.
+	this.AddCtrlPt = function (x, y) {
+		var im_ratio = main_image.GetImRatio();
+		x = Math.round(x / im_ratio);
+		y = Math.round(y / im_ratio);
+
+		this.pts_x.push(x);
+		this.pts_y.push(y);
+
+		DrawCtrlPoint('myCanvas_fg', Math.round(x * im_ratio), Math.round(y * im_ratio), '#00ff00', 6);
+		DrawLineSegment('myCanvas_fg', this.lastx * im_ratio, this.lasty * im_ratio, x * im_ratio, y * im_ratio, '#0000ff');
+
+		this.lastx = x;
+		this.lasty = y;
+	};
+
+
+	// Deletes the annotation's polygon from the screen.
+	this.DeletePolygon = function () {
+		ClearCanvas('myCanvas_fg', main_image.width_curr, main_image.height_curr);
+	};
+
+	this.DrawWebDashline = function (x, y) {
+		if (this.lastx < 0 || this.pts_x.length < 1) return;
+
+		var im_ratio = main_image.GetImRatio();
+		x = Math.round(x / im_ratio);
+		y = Math.round(y / im_ratio);
+		
+		var color = 'rgba(0,0,255,0.3)'; // blue
+		if (this.GetNumOfCtrlPts() < 2) {
+			//g.DrawDashRectangle(this.lastx, this.lasty, x, y, main_image.GetImRatio(), color);
+			DrawRectangle('myCanvas_tmp', this.lastx * im_ratio, this.lasty * im_ratio, x * im_ratio, y * im_ratio, color);
+			DrawLineSegment('myCanvas_tmp', this.lastx * im_ratio, this.lasty * im_ratio, x * im_ratio, y * im_ratio, color);
+		} else {
+			DrawLineSegment('myCanvas_tmp', this.lastx * im_ratio, this.lasty * im_ratio, x * im_ratio, y * im_ratio, color);
+		}
+	};
+	this.DelPrevDashLine = function () {
+		ClearCanvas('myCanvas_tmp', main_image.width_curr, main_image.height_curr);
+	};
+
+	this.GetNumOfCtrlPts = function () {
+		return this.pts_x.length;
+	};
+
+	// Draw a polygon given this annotation's control points.
+	this.DrawPolygon = function (im_ratio) {
+		DrawPolygon('myCanvas_bg', this.pts_x, this.pts_y, this.getObjectColor(this.anno_id), im_ratio);
+
+	};
+
+	this.CloseRectangle = function () {
+		if (this.pts_x.length != 2) return;
+
+		this.isRectangle = 1;
+
+		var x1 = this.pts_x[0] * main_image.GetImRatio();
+		var y1 = this.pts_y[0] * main_image.GetImRatio();
+		var x2 = this.pts_x[1] * main_image.GetImRatio();
+		var y2 = this.pts_y[1] * main_image.GetImRatio();
+
+		this.DeleteLastControlPoint();
+
+		this.AddCtrlPt(x2, y1);
+		this.AddCtrlPt(x2, y2);
+		this.AddCtrlPt(x1, y2);
+
+	};
+
+	// Deletes the last control point that the user entered.
+	this.DeleteLastControlPoint = function () {
+		if (this.pts_x.length > 1) {
+			this.ShortenPts();
+			ClearCanvas('myCanvas_fg', main_image.width_curr, main_image.height_curr);
+			var im_ratio = main_image.GetImRatio();
+			for (i = 0; i < this.pts_x.length; i++) {
+				DrawCtrlPoint('myCanvas_fg', Math.round(this.pts_x[i] * im_ratio), Math.round(this.pts_y[i] * im_ratio), '#00ff00', 6);
+			}
+			for (i = 0; i < this.pts_x.length - 1; i++) {
+				DrawLineSegment('myCanvas_fg', Math.round(this.pts_x[i] * im_ratio), Math.round(this.pts_y[i] * im_ratio), Math.round(this.pts_x[i + 1] * im_ratio), Math.round(this.pts_y[i + 1] * im_ratio), '#0000ff');
+			}
+			return 1;
+		}
+		return 0;
+	};
+
+	// Fill the interior of the polygon.
+	this.FillPolygon = function () {
+		ClearCanvas('myCanvas_fg', main_image.width_curr, main_image.height_curr);
+		FillPolygon('myCanvas_fg', this.pts_x, this.pts_y, 'rgba(255,0,0,0.5)', main_image.GetImRatio());
+	};
+
+	// Unfill the interior of the polygon.
+	this.UnfillPolygon = function () {
+		ClearCanvas('myCanvas_fg', main_image.width_curr, main_image.height_curr);
+	};
+
+
+	// This function shows all control points for an annotation it takes in 
+	// arrays of x and y points
+	this.ShowControlPoints = function () {
+		var im_ratio = main_image.GetImRatio();
+		for (i = 0; i < this.pts_x.length; i++) {
+			DrawCtrlPoint('myCanvas_fg', Math.round(this.pts_x[i] * im_ratio), Math.round(this.pts_y[i] * im_ratio), '#00ff00', 5);
+		}
+	};
+
+	this.StartMoveControlPoint = function (x, y, im_ratio) {
+		var i = this.getNearestControlPoint(x, y, im_ratio);
+		if (i >= 0) {
+			this.selectedControlPoint = i;
+			this.MoveControlPoint(x, y, im_ratio);
+			return 1;
+		}
+		return 0;
+	};
+
+	this.MoveControlPoint = function (x, y, im_ratio) {
+		var i = this.selectedControlPoint;
+
+		this.pts_x[i] = Math.round(x / im_ratio);
+		this.pts_y[i] = Math.round(y / im_ratio);
+
+		this.pts_x[i] = Math.max(Math.min(this.pts_x[i], main_image.width_orig), 1);
+		this.pts_y[i] = Math.max(Math.min(this.pts_y[i], main_image.height_orig), 1);
+
+		if (this.isRectangle) {
+			var prev_i = i - 1;
+			var next_i = i + 1;
+			if (prev_i < 0) {
+				prev_i = prev_i + 4;
+			}
+			if (next_i > 3) {
+				next_i = next_i - 4;
+			}
+			if (i == 0 || i == 2) {
+				//  \
+				this.pts_x[prev_i] = this.pts_x[i];
+				this.pts_y[next_i] = this.pts_y[i];
+			} else {
+				//  /
+				this.pts_x[next_i] = this.pts_x[i];
+				this.pts_y[prev_i] = this.pts_y[i];
+			}
+		}
+
+		// Adjust polygon:
+		this.FillPolygon();
+
+		// Adjust control points:
+		this.ShowControlPoints();
+	};
+
+	this.getNearestControlPoint = function (x, y, im_ratio) {
+		var d = 4;
+		var cpt = -1;
+		for (i = 0; i < this.pts_x.length; i++) {
+			var j = Math.sqrt(Math.pow(Math.round(this.pts_x[i] * im_ratio) - x, 2) + Math.pow(Math.round(this.pts_y[i] * im_ratio) - y, 2));
+			if (j < d) {
+				d = j;
+				cpt = i;
+			}
+		}
+		return cpt;
+	};
+
+	// Returns the closest point to (x,y) that lies along the boundary of the polygon.
+	this.ClosestPoint = function (x, y) {
+		var eps = 1e-3;
+		var shortestDist = Infinity;
+		var pt = new Array(3);
+		var xs = this.pts_x;
+		var ys = this.pts_y;
+		var thisdist;
+
+		for (var i = 0, j = xs.length - 1; i < xs.length; j = i, i++) {
+			thisdist = this.dist(x, y, xs[j], ys[j]); //snap to nearby edges
+			if (thisdist < shortestDist) {
+				shortestDist = thisdist;
+				pt[0] = xs[j];
+				pt[1] = ys[j];
+				pt[2] = thisdist;
+			}
+
+			var xi = xs[i],
+				yi = ys[i];
+			var xj = xs[j],
+				yj = ys[j];
+
+			var l = (xj - xi) * (xj - xi) + (yj - yi) * (yj - yi);
+			var k = ((x - xi) * (xj - xi) + (y - yi) * (yj - yi)) / l;
+			var xt = k * (xj - xi) + xi;
+			var yt = k * (yj - yi) + yi;
+
+			if (Math.min(xi, xj) - eps <= xt && xt <= Math.max(xi, xj) + eps && Math.min(yi, yj) - eps <= yt && yt <= Math.max(yi, yj) + eps) {
+				thisdist = this.dist(x, y, xt, yt);
+				if (thisdist < shortestDist) {
+					shortestDist = thisdist;
+					pt[0] = xt;
+					pt[1] = yt;
+					pt[2] = thisdist;
+					pt[3] = Math.atan2(yi - yj, xi - xj);
+				}
+			}
+		}
+		return pt;
+	};
+
+	// This function removes all displayed control points from an annotation
+	this.RemoveControlPoints = function () {
+		ClearCanvas('myCanvas_fg', main_image.width_curr, main_image.height_curr);
+	};
+
+	this.charCodeAt = function (text, position) {
+		var tmp = text.substring(position, position + 1);
+		for (var i = 1; i <= 255; i++)
+		if (unescape('%' + i.toString(16)) == tmp) return i;
+		return 0;
+	};
+
+	this.getObjectColor = function (p) {
+		//if the polygon is still open, then its color should be blue.  (7.27.06)
+		//if (this.is_selected && (this.lastx != -1)) return "#0000ff";
+
+		//otherwise:
+		var objectColors = new Array(14);
+		objectColors[0] = "009900"; // good
+		objectColors[1] = "00ff00"; // maybe
+		objectColors[2] = "ccff00"; // good
+		objectColors[3] = "ffff00"; // same as 2
+		objectColors[4] = "ffcc00"; // maybe
+		objectColors[5] = "ff9999"; // good
+		objectColors[6] = "cc0033"; // maybe
+		objectColors[7] = "ff33cc"; // good
+		objectColors[8] = "9933ff"; // maybe
+		objectColors[9] = "990099"; // bad
+		objectColors[10] = "000099"; // bad
+		objectColors[11] = "006699"; // bad
+		objectColors[12] = "00ccff"; // good
+		objectColors[13] = "999900"; // bad
+		// case insensative hashing:
+		var name = this.obj_name.toUpperCase();
+		var hash = 0;
+		for (var i = 0; i < name.length; i++) { //hash code based on name
+			hash += this.charCodeAt(name, i);
+		}
+		hash = (((hash + 567) * 1048797) % 14); //pseudo-randomize
+		return "#" + objectColors[hash];
+	};
+
+	this.ShortenPts = function () {
+		var l = this.pts_x.length;
+		this.pts_x = this.pts_x.slice(0, l - 1);
+		this.pts_y = this.pts_y.slice(0, l - 1);
+		this.lastx = this.pts_x[l - 2];
+		this.lasty = this.pts_y[l - 2];
+	};
+
+	// Compute the L2 distance between two Cartesian points.
+	this.dist = function (x0, y0, x1, y1) {
+		return Math.sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1));
+	};
+}
+</script>
+
+<!-- webcanvas -->
+<script type="text/javascript">
+var DRAW_CANVAS = 1;
+var SEL_CANVAS = 2;
+
+function webcanvas() {
+	this.edit_mode = DRAW_CANVAS;
+	this.selected_id = -1;
+	this.annotations = new Array();
+	this.draw_anno = null;
+	this.isEditingControlPoint = 0;
+
+	this.OnMouseDown = function (event) {
+		var x = GetEventPosX(event);
+		var y = GetEventPosY(event);
+
+		if (this.edit_mode == DRAW_CANVAS) {
+			if (event.button > 1) { // press the right button to close polygon
+				if (!this.draw_anno) return;
+				if (this.draw_anno.GetNumOfCtrlPts() > 2) {
+					var p = this.draw_anno;
+					p.DelPrevDashLine();
+					p.DeletePolygon();
+					this.annotations.push(p);
+					p.DrawPolygon(main_image.GetImRatio());
+					this.draw_anno = null;
+				}
+				else if (this.draw_anno.GetNumOfCtrlPts() == 2) {
+					var p = this.draw_anno;
+					p.DelPrevDashLine();
+					p.CloseRectangle();
+					p.DeletePolygon();
+					this.annotations.push(p);
+					p.DrawPolygon(main_image.GetImRatio());
+
+					this.draw_anno = null;
+				}
+				else if (this.draw_anno.GetNumOfCtrlPts() == 1) {
+					// add ctrl pt
+					this.draw_anno.AddCtrlPt(x, y);
+					var p = this.draw_anno;
+					p.DelPrevDashLine();
+					p.CloseRectangle();
+					p.DeletePolygon();
+					this.annotations.push(p);
+					p.DrawPolygon(main_image.GetImRatio());
+
+					this.draw_anno = null;
+				} else {
+					alert("At least 1 points are needed to close this polygon");
+				}
+			} else { // press the left button to add ctrl pt
+				if (!this.draw_anno) { // new polygon
+					var new_id = this.annotations.length;
+					this.draw_anno = new annotation(new_id);
+					this.draw_anno.CreatePolygon(x, y);
+				}
+				else { // add one more point to the current polygon
+					this.draw_anno.DelPrevDashLine();
+					this.draw_anno.AddCtrlPt(x, y);
+					if (this.draw_anno.GetNumOfCtrlPts() > 2) {
+						this.draw_anno.isRectangle = 0;
+					}
+				}
+			}
+		}
+		else if (this.edit_mode == SEL_CANVAS) {
+			if (event.button > 1 || this.selected_id < 0) return;
+			if (this.annotations[this.selected_id].is_selected == 0) {
+				this.annotations[this.selected_id].ShowControlPoints();
+				this.annotations[this.selected_id].is_selected = 1;
+
+				//remove drawing from myCanvas_bg
+				ClearCanvas('myCanvas_bg', main_image.width_curr, main_image.height_curr);
+				for (var i = 0; i < this.annotations.length; i++) {
+					if (i != this.selected_id) {
+						this.annotations[i].DrawPolygon(main_image.GetImRatio());
+					}
+				}
+
+			} else { //already select one polygon
+				var sx = x / main_image.GetImRatio();
+				var sy = y / main_image.GetImRatio();
+				var pt = this.annotations[this.selected_id].ClosestPoint(sx, sy);
+				if (pt[2] > 11) {
+					// doesn't hit any control points, unselect
+					this.annotations[this.selected_id].is_selected = 0;
+					this.annotations[this.selected_id].UnfillPolygon();
+					this.annotations[this.selected_id].RemoveControlPoints();
+					//draw in myCanvas_bg
+					this.annotations[this.selected_id].DrawPolygon(main_image.GetImRatio());
+
+					this.selected_id = -1;
+				} else { // move ctrl points
+					if (!this.isEditingControlPoint && this.annotations[this.selected_id].StartMoveControlPoint(x, y, main_image.GetImRatio())) {
+						this.isEditingControlPoint = 1;
+						//change the save *
+					}
+				}
+			}
+		}
+
+	};
+
+	this.OnMouseUp = function (event) {
+		var x = GetEventPosX(event);
+		var y = GetEventPosY(event);
+
+		if (event.button > 1) return;
+		if (this.edit_mode == SEL_CANVAS) {
+			if (this.isEditingControlPoint) {
+				this.annotations[this.selected_id].MoveControlPoint(x, y, main_image.GetImRatio());
+				this.isEditingControlPoint = 0;
+				return;
+			}
+		}
+	}
+
+
+	this.OnMouseMove = function (event) {
+		var x = GetEventPosX(event);
+		var y = GetEventPosY(event);
+		if (this.edit_mode == DRAW_CANVAS) {
+			if (this.draw_anno) {
+				this.draw_anno.DelPrevDashLine();
+				this.draw_anno.DrawWebDashline(x, y);
+			}
+		} else if (this.edit_mode == SEL_CANVAS) {
+
+			if (this.isEditingControlPoint) {
+				this.annotations[this.selected_id].MoveControlPoint(x, y, main_image.GetImRatio());
+				return;
+			} else {
+
+				if (this.selected_id >= 0 && this.annotations[this.selected_id].is_selected == 1) {
+/*
+                    var g = document.getElementById('myCanvas_fg');
+                    var dir = this.FindEdgeDirection(this.selected_id, x, y);
+                    if (dir == 0)
+                    g.setAttribute('style', 'cursor:n-resize;');
+                    else if (dir == 1)
+                    g.setAttribute('style', 'cursor:sw-resize;');
+                    else if (dir == 2)
+                    g.setAttribute('style', 'cursor:e-resize;');
+                    else if (dir == 3)
+                    g.setAttribute('style', 'cursor:se-resize;');
+                    else if (dir == 4)
+                    g.setAttribute('style', 'cursor:s-resize;');
+                    else if (dir == 5)
+                    g.setAttribute('style', 'cursor:ne-resize;');
+                    else if (dir == 6)
+                    g.setAttribute('style', 'cursor:w-resize;');
+                    else if (dir == 7)
+                    g.setAttribute('style', 'cursor:nw-resize;');
+                    else
+                    g.setAttribute('style', 'cursor:default;');
+                    */
+					return;
+				}
+				var idx = this.FindNearestPolygon(x, y);
+				if (idx >= 0) {
+					if (this.selected_id >= 0 && idx != this.selected_id) {
+						this.annotations[this.selected_id].UnfillPolygon();
+						this.annotations[this.selected_id].RemoveControlPoints();
+					}
+
+					this.annotations[idx].FillPolygon();
+					this.selected_id = idx;
+				}
+				else {
+					if (this.selected_id >= 0) {
+						this.annotations[this.selected_id].UnfillPolygon();
+						this.annotations[this.selected_id].RemoveControlPoints();
+						this.selected_id = -1;
+					}
+				}
+
+			}
+
+		}
+	};
+
+
+
+	this.FindEdgeDirection = function (idx, x, y) {
+		var sx = x / main_image.GetImRatio();
+		var sy = y / main_image.GetImRatio();
+		var pt = this.annotations[idx].ClosestPoint(sx, sy);
+		if (pt[2] > 5) return -1;
+		else {
+			if (pt[3] >= -Math.PI / 8 && pt[3] < Math.PI / 8) return 0;
+			else if (pt[3] >= Math.PI / 8 && pt[3] < Math.PI * 3 / 8) return 1;
+			else if (pt[3] >= Math.PI * 3 / 8 && pt[3] < Math.PI * 5 / 8) return 2;
+			else if (pt[3] >= Math.PI * 5 / 8 && pt[3] < Math.PI * 7 / 8) return 3;
+			else if (pt[3] >= Math.PI * 7 / 8 || pt[3] < -Math.PI * 7 / 8) return 4;
+			else if (pt[3] >= -Math.PI * 7 / 8 && pt[3] < -Math.PI * 5 / 8) return 5;
+			else if (pt[3] >= -Math.PI * 5 / 8 && pt[3] < -Math.PI * 3 / 8) return 6;
+			else if (pt[3] >= -Math.PI * 3 / 8 && pt[3] < -Math.PI / 8) return 7;
+		}
+	};
+
+	this.FindNearestPolygon = function (x, y) {
+		var sx = x / main_image.GetImRatio();
+		var sy = y / main_image.GetImRatio();
+		var idx = -1;
+		var minDist = 1000;
+		for (var i = 0; i < this.annotations.length; i++) {
+			var pt = this.annotations[i].ClosestPoint(sx, sy);
+			if (minDist > pt[2]) {
+				minDist = pt[2];
+				idx = i;
+			}
+		}
+
+		if ((minDist * main_image.GetImRatio()) < 10) return idx;
+		else return -1;
+	};
+
+
+	this.EraseSelectedPolygon = function () {
+		if (this.edit_mode != SEL_CANVAS || this.selected_id < 0) return;
+		if (this.annotations[this.selected_id].is_selected == 0) return;
+		this.annotations[this.selected_id].DeletePolygon();
+		this.annotations.splice(this.selected_id, 1);
+		this.selected_id = -1;
+
+	};
+
+
+	// Handles when the user clicks on the "Erase Segment" button.
+	this.EraseSegmentButton = function () {
+		if (this.draw_anno) {
+			this.draw_anno.DelPrevDashLine();
+			if (!this.draw_anno.DeleteLastControlPoint()) {
+				this.draw_anno.DeletePolygon();
+				this.draw_anno = null;
+			}
+		}
+	};
+}
+</script>
+
+<!-- browser dependent -->
+<script type="text/javascript">
+var bname;
+var bversion;
+var req_submit;
+
+// Get the x position of the mouse event.
+function GetEventPosX(event) {
+	if (IsNetscape()) return event.layerX;
+	if (IsMicrosoft()) return event.x + document.getElementById('main_image').scrollLeft; //offsetX;
+	return event.offsetX;
+}
+
+// Get the y position of the mouse event.
+function GetEventPosY(event) {
+	if (IsNetscape()) return event.layerY;
+	if (IsMicrosoft()) return event.y + document.getElementById('main_image').scrollTop; //offsetY;
+	return event.offsetY;
+}
+
+function GetBrowserInfo() {
+	bname = navigator.appName;
+	if (IsMicrosoft()) {
+		var arVersion = navigator.appVersion.split("MSIE");
+		bversion = parseFloat(arVersion[1]);
+	}
+	else if (IsNetscape() || IsSafari()) {
+		bversion = parseInt(navigator.appVersion);
+		//check for Safari.  
+		if (navigator.userAgent.match('Safari')) bname = 'Safari';
+	}
+	else bversion = 0;
+}
+
+function IsNetscape() {
+	return (bname.indexOf("Netscape") != -1);
+}
+
+function IsMicrosoft() {
+	return (bname.indexOf("Microsoft") != -1);
+}
+
+function IsSafari() {
+	return (bname.indexOf("Safari") != -1);
+}
+
+function IsChrome() {
+	return (bname.indexOf("chrome") != -1);
+}
+</script>
+
+<!-- webimage -->
+<script type="text/javascript">
+// image class
+// Fetches and manipulates the main image that will be annotated.
+// From the HTML code, create a <img src...> tag with an id and pass
+// this id in as the argument when creating the class.
+
+
+function webimage(id) {
+	this.page_in_use = 0; // Describes if we already see an image.
+	this.dir_name = null;
+	this.im_name = null;
+
+	this.id = id;
+	this.im = document.getElementById(this.id);
+	this.width_orig;
+	this.height_orig;
+	this.width_curr; //current width and height of the image itself
+	this.height_curr;
+	this.im_ratio; // Ratio of (displayed image dims) / (orig image dims)
+	this.browser_im_ratio; // Initial im_ratio; this should not get changed!!
+	this.curr_frame_width; // Current width of main_image.
+	this.curr_frame_height; // Current height of main_image.
+	// Parses the URL and gets the collection, directory, and filename
+	// information of the image to be annotated.  Returns true if the
+	// URL has collection, directory, and filename information.
+	this.ParseURL = function () {
+		var source_url = document.URL;
+		var idx = source_url.indexOf('?');
+		if ((idx != -1) && (this.page_in_use == 0)) {
+
+			this.page_in_use = 1;
+			var par_str = source_url.substring(idx + 1, source_url.length);
+			do {
+				idx = par_str.indexOf('&');
+				var par_tag;
+				if (idx == -1) par_tag = par_str;
+				else par_tag = par_str.substring(0, idx);
+				var par_field = this.GetURLField(par_tag);
+				var par_value = this.GetURLValue(par_tag);
+				if (par_field == 'folder') this.dir_name = par_value;
+				else if (par_field == 'image') {
+					this.im_name = par_value;
+					if (this.im_name.indexOf('.jpg') == -1 && this.im_name.indexOf('.png') == -1) this.im_name = this.im_name + '.jpg';
+				}
+				par_str = par_str.substring(idx + 1, par_str.length);
+			} while (idx != -1);
+			if ((!this.dir_name) || (!this.im_name)) {
+				return 0;
+				//return this.SetURL(source_url);
+			}
+			document.getElementById('body').style.visibility = 'visible';
+		}
+		else {
+			return 0;
+			//return this.SetURL(source_url);
+		}
+		return 1;
+	};
+
+	this.GetImagePath = function () {
+		return 'Images/' + this.dir_name + '/' + this.im_name;
+	};
+
+	this.GetAnnotationPath = function () {
+		return 'Annotations/' + this.dir_name + '/' + this.im_name.substr(0, this.im_name.length - 4) + '.xml';
+	};
+
+	// String is assumed to have field=value form.  Parses string to
+	// return the field.
+	this.GetURLField = function (str) {
+		var idx = str.indexOf('=');
+		return str.substring(0, idx);
+	};
+
+	// String is assumed to have field=value form.  Parses string to
+	// return the value.
+	this.GetURLValue = function (str) {
+		var idx = str.indexOf('=');
+		return str.substring(idx + 1, str.length);
+	};
+
+	// Fetches a new image based on the URL string or gets a new one at
+	// random from the dirlist.  onload_helper is a pointer to a helper
+	// function that is calld when the image is loaded.  Typically, this
+	// will call obj.SetImageDimensions().
+	this.GetNewImage = function (onload_helper) {
+		document.getElementById('loading').style.display = '';
+		if (IsMicrosoft()) this.im.style.visibility = 'hidden';
+		else this.im.style.display = 'none';
+		if (!this.ParseURL()) return;
+		this.im.src = this.GetImagePath();
+		this.im.onload = onload_helper;
+	};
+
+	// Returns the ratio of the available width/height to the original
+	// width/height.
+	this.GetImRatio = function () {
+		return this.im_ratio;
+	};
+
+	// If (x,y) is not in view, then scroll it into view.  Return adjusted
+	// (x,y) point that takes into account the slide offset.
+	this.SlideWindow = function (x, y) {
+		var pt = Array(2);
+		if (!this.IsPointVisible(x, y)) {
+			document.getElementById('main_image').scrollLeft = x - 100;
+			document.getElementById('main_image').scrollTop = y - 100;
+		}
+		pt[0] = x - document.getElementById('main_image').scrollLeft;
+		pt[1] = y - document.getElementById('main_image').scrollTop;
+		return pt;
+	};
+
+	//tells the picture to take up the available 
+	//space in the browser, if it needs it. 6.29.06 
+	this.ScaleFrame = function () {
+		var mainImage = document.getElementById('main_image');
+		//look at the available browser height and the image height,
+		//and use the smaller of the two for the main_image height.
+		var avail_height = this.GetAvailHeight();
+		if (this.height_curr > avail_height) this.curr_frame_height = avail_height;
+		else this.curr_frame_height = this.height_curr;
+		//likewise for width
+		var avail_width = this.GetAvailWidth();
+		if (this.width_curr > avail_width) this.curr_frame_width = avail_width;
+		else this.curr_frame_width = this.width_curr;
+
+		mainImage.style.width = this.curr_frame_width + 'px';
+		mainImage.style.height = this.curr_frame_height + 'px';
+
+	};
+
+	// Retrieves and sets the original image's dimensions (width/height).
+	this.SetOrigImDims = function (im) {
+		//7.12.06 Safari image dimensions fix
+		if (IsSafari()) {
+			var url = im.src;
+			var img = new Image;
+			img.src = url;
+			img.visibility = 'hidden';
+			img.display = 'none';
+			this.width_orig = img.width;
+			this.height_orig = img.height;
+		}
+		else {
+			this.width_orig = im.width;
+			this.height_orig = im.height;
+		}
+	};
+
+	//gets available height
+	this.GetAvailHeight = function () {
+		return document.getElementById('main_section').offsetHeight;
+	};
+
+	//gets available width
+	this.GetAvailWidth = function () {
+		return document.getElementById('main_section').offsetWidth;
+	};
+
+	// Sets the dimensions of the image based on browser setup.
+	this.SetImageDimensions = function () {
+		this.SetOrigImDims(this.im);
+		var avail_width = this.GetAvailWidth();
+		var avail_height = this.GetAvailHeight();
+		var width_ratio = avail_width / this.width_orig;
+		var height_ratio = avail_height / this.height_orig;
+
+		if (width_ratio < height_ratio) this.im_ratio = width_ratio;
+		else this.im_ratio = height_ratio;
+		this.browser_im_ratio = this.im_ratio;
+
+		this.width_curr = Math.round(this.im_ratio * this.width_orig);
+		this.height_curr = Math.round(this.im_ratio * this.height_orig);
+
+		this.im.width = this.width_curr;
+		this.im.height = this.height_curr;
+
+		document.getElementById('myCanvas_bg').setAttribute('width', this.width_curr);
+		document.getElementById('myCanvas_bg').setAttribute('height', this.height_curr);
+
+		document.getElementById('myCanvas_fg').setAttribute('width', this.width_curr);
+		document.getElementById('myCanvas_fg').setAttribute('height', this.height_curr);
+
+		document.getElementById('myCanvas_tmp').setAttribute('width', this.width_curr);
+		document.getElementById('myCanvas_tmp').setAttribute('height', this.height_curr);
+
+		this.curr_frame_width = this.width_curr;
+		this.curr_frame_height = this.height_curr;
+
+		document.getElementById('loading').style.visibility = 'hidden';
+		document.getElementById('main_image').style.visibility = 'visible';
+		if (IsMicrosoft()) {
+			this.im.style.visibility = '';
+			document.getElementById('main_image').style.overflow = 'visible';
+			this.ScaleFrame();
+		}
+		else this.im.style.display = '';
+	};
+
+	// Returns true if the image is zoomed to the original (fitted) resolution.
+	this.IsFitImage = function () {
+		return (this.im_ratio == this.browser_im_ratio);
+	};
+
+	// Returns true if (x,y) is viewable.
+	this.IsPointVisible = function (x, y) {
+		var scrollLeft = document.getElementById('main_image').scrollLeft;
+		var scrollTop = document.getElementById('main_image').scrollTop;
+		if (((x * this.im_ratio < scrollLeft) || (x * this.im_ratio - scrollLeft > this.curr_frame_width - 160)) || ((y * this.im_ratio < scrollTop) || (y * this.im_ratio - scrollTop > this.curr_frame_height))) return false; //the 160 is about the width of the right-side div
+		return true;
+	};
+}
+</script>
+
+<script type="text/javascript">
+var main_canvas;
+var main_image;
+
+function MainInit() {
+	main_canvas = new webcanvas();
+	main_image = new webimage('im');
+
+	function main_image_onload_helper() {
+		main_image.SetImageDimensions();
+	};
+	main_image.GetNewImage(main_image_onload_helper);
+}
+
+// Button Event
+
+function OnUndoButton() {
+	main_canvas.EraseSegmentButton();
+}
+
+function OnDrawButton() {
+	if (main_canvas.edit_mode != DRAW_CANVAS) {
+		main_canvas.edit_mode = DRAW_CANVAS;
+		if (main_canvas.selected_id >= 0) {
+			if (main_canvas.annotations[main_canvas.selected_id].is_selected) {
+				//draw in myCanvas_bg
+				main_canvas.annotations[main_canvas.selected_id].DrawPolygon(main_image.GetImRatio());
+
+				main_canvas.annotations[main_canvas.selected_id].is_selected = 0;
+				main_canvas.annotations[main_canvas.selected_id].UnfillPolygon();
+				main_canvas.annotations[main_canvas.selected_id].RemoveControlPoints();
+				main_canvas.selected_id = -1;
+			}
+		}
+	}
+}
+
+function OnSelectButton() {
+	if (main_canvas.edit_mode != SEL_CANVAS) {
+		main_canvas.edit_mode = SEL_CANVAS;
+		if (main_canvas.draw_anno) {
+			main_canvas.draw_anno.DelPrevDashLine();
+			main_canvas.draw_anno.DeletePolygon();
+			main_canvas.draw_anno = null;
+		}
+	}
+}
+
+function OnDeleteButton() {
+	main_canvas.EraseSelectedPolygon();
+}
+</script>
+
+<h2>DrawMe Demo</h2>
+
+<div id="Div_toolbar" style="font-size: small; font-weight: bold;">
+	Mode: 
+	<a href="javascript:OnDrawButton();" title="Draw polygon on canvas">Drawing</a>
+	<a href="javascript:OnSelectButton();" title="Edit polygon on canvas">Editing</a> 
+	Operation: 
+	<a href="javascript:OnUndoButton();" title="Undo last control point">Delete Last Control Point</a>
+	<a href="javascript:OnDeleteButton();" title="Delete selected polygon">Delete Selected Polygon</a>
+</div>
+
+<div id="main_section" style="position: relative; left: 0px; top: 0px; width: 500px; height: 500px;">
+	<div id="loading">Loading image...</div>
+	<div id="main_image" style="visibility: hidden; overflow: auto;"
+		onmousedown="main_canvas.OnMouseDown(event);return false;"
+		onmousemove="main_canvas.OnMouseMove(event);return false;" 
+		onmouseup="main_canvas.OnMouseUp(event);return false;"
+		oncontextmenu="javascript:return false;" >
+		<img id="im" style="position: absolute; left: 0px; top: 0px; vertical-align: bottom; z-index: -3; visibility: visible" />
+		<canvas id="myCanvas_bg" width="500" height="500" style="position: absolute; left: 0px; top: 0px; z-index: 0; cursor: default;">
+</canvas>
+		<canvas id="myCanvas_tmp" width="500" height="500" style="position: absolute; left: 0px; top: 0px; z-index: 1; cursor: default;"></canvas>
+		<canvas id="myCanvas_fg" width="500" height="500" style="position: absolute; left: 0px; top: 0px; z-index: 2; cursor: default;">
+</canvas>
+	</div>
+</div>
+
+<script type="text/javascript">
+    //run the code!
+	GetBrowserInfo();
+	MainInit();
+</script>
+
+</body>
+</html>

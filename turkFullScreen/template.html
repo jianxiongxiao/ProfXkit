@@ -1,0 +1,116 @@
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js" ></script>
+
+<style>
+.myButton {
+	background-color:#44c767;
+	-moz-border-radius:28px;
+	-webkit-border-radius:28px;
+	border-radius:28px;
+	border:1px solid #18ab29;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family:Arial;
+	font-size:17px;
+	padding:16px 31px;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #2f6627;
+}
+.myButton:hover {
+	background-color:#5cbf2a;
+}
+.myButton:active {
+	position:relative;
+	top:1px;
+}
+</style>
+
+<script type="text/javascript">
+
+var jobId = "short parameters like job ID";
+var longParameters = "long parameters to pass as a string, e.g. json encoding of long image list"; // use AMturk ${VariableName}
+var workerId;
+var assignmentId;
+var hitId;
+var popupWindow = null;
+
+function gup( name )
+{
+	name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+	var regexS = "[\\?&]"+name+"=([^&#]*)";
+	var regex = new RegExp( regexS );
+	var results = regex.exec( window.location.href );
+	if( results == null )
+		return "NO_GUP_VAL";
+	else
+		return results[1];
+}
+
+var myWindow;
+
+function notifyBack(message){
+	//alert('get notify by the popup window: '+message);
+
+	if (message.substring(0,5)=="DONE:"){
+		$('#answer2mturk').val(message.substring(6));
+		myWindow.close();
+		$('#SubmitButton').click();
+	}
+
+}
+
+function popupWindowNow(){
+	if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE"){
+		alert("Please accept the HIT first before you can start");
+	}else{
+
+
+		myWindow = window.open("", "fullscreen+webcam", "width=400, height=300, menubar=no, status=no, titlebar=no, toolbar=no");   // Opens a new window
+		
+		
+		{
+			var script = myWindow.document.createElement('script');
+			script.onload = function() {
+				alert("Script loaded and ready");
+			};
+			script.src = "https://ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js";
+			myWindow.document.getElementsByTagName('head')[0].appendChild(script);
+		}
+		
+
+		{
+			var script = myWindow.document.createElement('script');
+			script.onload = function() {
+				alert("Script loaded and ready");
+			};
+			script.src = "https://vision.princeton.edu/pvt/turkFullScreen/code.js";
+			myWindow.document.getElementsByTagName('head')[0].appendChild(script);
+
+		}
+		
+		myWindow.document.write("<div id=\x22div2fullscreen\x22 style=\x22width: 100%; height: 100%;\x22>This is 'myWindow'<br/><button onclick=\x22  var element = document.getElementById('div2fullscreen'); if(element.requestFullscreen) {element.requestFullscreen(); } else if(element.mozRequestFullScreen) {element.mozRequestFullScreen(); } else if(element.webkitRequestFullscreen) {element.webkitRequestFullscreen(); } else if(element.msRequestFullscreen) {element.msRequestFullscreen(); };\x22>fullscreen</button><button onclick=\x22window.opener.notifyBack('notifyBack');\x22>notifyBack</button><button id=\x22StartButton\x22 onclick=\x22StartNow();\x22>Start</button><button onclick=\x22window.opener.notifyBack('DONE: jianxiong is cool'); \x22>submit parent</button></div>");   // Text in the new window
+
+
+	}
+}
+
+
+$(document).ready(function(){
+	workerId = gup('workerId');
+	assignmentId = gup('assignmentId');
+	hitId = gup('hitId');
+	if (assignmentId != "ASSIGNMENT_ID_NOT_AVAILABLE"){
+		$('#popupWindowButton').html('Open Fullscreen Window to Work Now');
+	}
+});
+
+</script>
+
+<p>Description of this task....</p>
+<div class="myButton" id="popupWindowButton" onclick="popupWindowNow();">Accept the HIT first before you can start</div>
+
+<input type="hidden" name="answer2mturk" id="answer2mturk" value="" autocomplete="off" />
+
+<input type=SUBMIT value="Submit" id="SubmitButton" style="display: none;">
+
+<p style="font-size: 8pt; color: #999;">By making judgments about these images, you are participating in a study being performed by Princeton University. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.</p>

@@ -1,0 +1,51 @@
+<html>
+<head>
+    <title>DrawMe: A light-weight Javascript library for labeling</title>
+</head>
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-15773988-4']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+<body>
+<h2>DrawMe: A light-weight Javascript library for line drawing on a picture</h2>
+
+<p>Written by <a href="http://web.mit.edu/jxiao/">Jianxiong Xiao</a></p>
+
+<a href="./parse_url_polygon_rectangle/DrawMe.html?folder=folder1&image=jianxiong.jpg"><img src="teaser.jpg" /></a>
+
+<p>
+DrawMe is a light-weight Javascript library to enable client-end line drawing on a picture in a web browser. It is targeted to provide a basis for self-define labeling tasks for computer vision researchers. It is different from <a href="http://labelme.csail.mit.edu/">LabelMe</a>, which provides full support but fixed labeling interface. DrawMe is a Javascript library only and the users are required to write their own code to make use of this library for their specific need of labeling. DrawMe does not provide any server or server-end code for labeling, but gives the user greater flexibility for their specific need. It also comes with a simple example with Amazon Mechanical Turk interface that serializes Javascript DOM object into text for HTML form submission. The user can easily build their own labeling interface based on this MTurk example to make use for the Amazon Mechanical Turk for labeling, either using paid workers or the researchers themselves with MTurk sandbox.
+</p>
+<p>
+DrawMe supports all major browsers, and is currently implemented using HTML5 canvas for non-IE browsers (Firefox, Chrome, Safari, etc.), and VML (Google encanvas) for IE browser. It is compatible with the latest browsers, and none-IE browsers and IE9 are all going to support HTML5 Canvas. 
+</p>
+<p>Please refer to README.html file for more information on usage and related information.</p>
+
+
+<p><a href="README.html" onClick="javascript: pageTracker._trackPageview('/README/version1');">README.html</a></p>
+
+<p><a href="http://people.csail.mit.edu/jxiao/DrawMe/DrawMe_v2.zip" onClick="javascript: pageTracker._trackPageview('/downloads/version2');">Download 2.0 version</a></p>
+
+<p><a href="http://people.csail.mit.edu/jxiao/DrawMe/DrawMe_v1.zip" onClick="javascript: pageTracker._trackPageview('/downloads/version1');">Download 1.0 version</a></p>
+
+<p>Please cite the following paper if you use this code:</p>
+<p>J. Xiao, J. Hays, K. Ehinger, A. Oliva, and A. Torralba <br>
+SUN Database: Large-scale Scene Recognition from Abbey to Zoo <br>
+Proceedings of 23rd IEEE Conference on Computer Vision and Pattern Recognition (CVPR2010) </p>
+
+<p>Please contact <a href="http://web.mit.edu/jxiao/">Jianxiong Xiao</a> for bug or broken link report.</p>
+
+
+<p>This software is available for only non-commercial use.  See the attached license in LICENSE.txt.</p>
+
+</body>
+</html>

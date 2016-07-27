@@ -1,0 +1,1 @@
+g++ test_render.cpp -o test_render -lGLU -lOSMesa -I/opt/X11/include -L/opt/X11/lib

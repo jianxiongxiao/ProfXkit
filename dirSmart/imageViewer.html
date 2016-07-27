@@ -1,0 +1,106 @@
+<html>
+<!-- written by Jianxiong Xiao @ 20130815 -->
+<head>
+<title>Princeton Online Image Viewer</title>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<style type="text/css">
+	table{
+		float:left;
+		text-align: center;
+	}
+</style>
+<script>
+    // Get Url Parameters
+    function gup(name) {
+        name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+        var regexS = "[\\?&]"+name+"=([^&#]*)";
+        var regex = new RegExp( regexS );
+        var results = regex.exec( window.location.href );
+        if( results == null )
+            return "";
+        else
+        	return results[1];
+    }
+
+	function run(){
+		// http://stackoverflow.com/questions/6994212/is-there-a-way-to-return-a-list-of-all-the-image-file-names-from-a-folder-using
+		if ($('#url').val()!=''){
+
+			if ($('#url').val()!=''){
+				var urlString = window.location.origin + window.location.pathname + '?url=' + $('#url').val();
+				if ($('#selector').val()!='') 	urlString += '&selector=' + $('#selector').val();
+				if ($('#width').val()!='')	urlString += '&width=' + $('#width').val() ;
+				if ($('#height').val()!='')	urlString += '&height=' + $('#height').val() ;
+				if ($('#max-width').val()!='')	urlString += '&max-width=' + $('#max-width').val() ;
+				if ($('#max-height').val()!='')	urlString += '&max-height=' + $('#max-height').val() ;
+
+				//urlString = urlString.replace("?a=a&", "?");
+
+				$('#urla').attr('href', urlString);
+				$('#urla').html(urlString);
+			}
+
+			$.ajax({
+				url: $('#url').val(),
+				success: function(data){
+					var fullFileList = new Array();
+					if ($('#selector').val()==''){
+						$(data).find('a').each(function(){					
+				        	fullFileList.push($(this).attr("href"));
+						});
+					}else{
+						$(data).find('a:contains(' + $('#selector').val() + ')').each(function(){					
+				        	fullFileList.push($(this).attr("href"));
+						});					
+					}
+					contentHTML = '';
+
+					for (var i = 0; i < fullFileList.length; ++i) {
+
+						contentHTML += '<table><tr><td>';
+
+
+						contentHTML += '<img src="' + $('#url').val() + fullFileList[i] + '" style="';
+						if ($('#width').val()!='')	contentHTML += ' width: ' + $('#width').val() + ';';
+						if ($('#height').val()!='')	contentHTML += ' height: ' + $('#height').val() + ';';
+						if ($('#max-width').val()!='')	contentHTML += ' max-width: ' + $('#max-width').val() + ';';
+						if ($('#max-height').val()!='')	contentHTML += ' max-height: ' + $('#max-height').val() + ';';
+						contentHTML += '"/> ';
+
+						if ($('#filename').is(':checked')) {
+							contentHTML += '</td></tr><tr><td>' + fullFileList[i] ;
+
+						}
+						contentHTML += '</td></tr></div>';
+					}
+
+					$('#result').html(contentHTML);
+				}
+			});			
+		}
+	}
+
+	$(document).ready(function() {
+		$('#url').val(gup('url'));
+		$('#selector').val(gup('selector'));
+		$('#width').val(gup('width'));
+		$('#height').val(gup('height'));
+		$('#max-width').val(gup('max-width'));
+		$('#max-height').val(gup('max-height'));
+		if(gup('filename')=='true' || gup('filename')=='yes' || gup('filename')=='checked'){
+			$('#filename').prop('checked', true);
+		}
+
+		run();
+	});
+</script>
+</head>
+<body>
+url: <input id="url" style="width: 400px;"/> selector: <input id="selector" style="width: 50px;"/> width: <input id="width" style="width: 50px;"/> height: <input id="height" style="width: 50px;"/> max-width: <input id="max-width" style="width: 50px;"/> max-height: <input id="max-height" style="width: 50px;"/> 
+<input type="checkbox" id="filename" value="true"> file name
+<button onclick="run();"  type="submit" />Run</button> <br />
+<a id="urla"></a><br />
+<div id="result">
+</div>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<html><body>
+
+
+
+<script src="jquery-1.10.0.min.js" type="text/javascript"></script>
+<script src="data.js" type="text/javascript"></script>
+
+
+<!--
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js" ></script>
+<script type="text/javascript">
+	var data=${data};
+	var examples=${examples};
+	var definition='${definition}';
+</script>
+-->
+
+<style type="text/css">div{
+		-webkit-user-select: none;
+		-moz-user-select: none; 
+	}
+	.target{
+		color: #0D0;
+	}
+	.target img{
+		border: 3px solid #0D0;
+	}
+	.noise{
+		color: #F00;
+	}
+	.noise img{
+		border: 3px solid #F00;
+	}
+	.target p:first-child{
+		display: none;
+	}
+	.target p:nth-child(2){
+		display: inline;
+	}
+	.noise p:first-child{
+		display: inline;
+	}
+	.noise p:nth-child(2){
+		display: none;
+	}
+	.none p:first-child{
+		display: none;
+	}
+	.none p:nth-child(2){
+		display: none;
+	}
+
+	.example {
+
+		display: inline-block;
+		text-align: center;
+		padding: 2px;
+	}
+	.example img{
+		border-width: 6px;
+		max-width: 120px;
+		height: 75px;
+	}	
+	.example p{
+		font-weight: normal; font-size: 12pt;
+	}
+
+
+	.focus { 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding-left: 12px;		
+   		padding-right: 12px;		
+   		padding-top: 0px;		
+   		padding-bottom: 0px;		
+		width: 400px; height: 450px;
+	}	
+	.focus1{ 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 6px;		
+		width: 100px; height: 100px;
+	}	
+	.focus2{ 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 4px;		
+		width: 50px;  height: 50px; 
+	}	
+	.focus3{ 
+		display: table-cell;
+   		vertical-align: middle; 
+   		padding: 2px;		
+		width: 25px;  height: 25px; 
+	}	
+
+	.focus img{ 
+		max-width: 376px;
+		max-height: 376px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;		
+		border-width: 12px; 
+	}	
+
+	.focus1 img{ 
+		max-width: 88px;
+		max-height: 88px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+		border-width: 6px; 
+	}	
+
+	.focus2 img{ 
+		max-width: 42px;
+		max-height: 42px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+		border-width: 4px; 
+	}	
+	.focus3 img{ 
+		max-width: 21px;
+		max-height: 21px;
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+   		margin-bottom: 0px;
+		border-width: 2px; 
+	}	
+
+	.focus p{ 
+		font-weight: bolder; font-size: 28pt; 
+	}
+	.focus1 p{ 
+		display: none;
+		font-weight: normal; font-size: 16pt; 
+	}
+	.focus2 p{ 
+		display: none;		
+		font-weight: normal; font-size: 9pt; 
+	}
+	.focus3 p{ 
+		display: none;	
+		font-weight: normal; font-size: 6pt; 
+	}
+</style>
+<script type="text/javascript">
+function answerHit(){$("#holderDiv"+currentIndex).hasClass("target")?($("#holderDiv"+currentIndex).removeClass("target"),$("#holderDiv"+currentIndex).addClass("noise")):($("#holderDiv"+currentIndex).addClass("target"),$("#holderDiv"+currentIndex).removeClass("noise"))}function currentTime(){var a=new Date;return a.getTime()}function displayFrame(a){for(var b=-4;b<data.length+4;++b)$("#holderDiv"+b).hide(),$("#holderDiv"+b).removeClass("focus3"),$("#holderDiv"+b).removeClass("focus2"),$("#holderDiv"+b).removeClass("focus1"),$("#holderDiv"+b).removeClass("focus");$("#holderDiv"+(a-4)).hide(),$("#holderDiv"+(a-3)).show(),$("#holderDiv"+(a-2)).show(),$("#holderDiv"+(a-1)).show(),$("#holderDiv"+a).show(),$("#holderDiv"+(a+1)).show(),$("#holderDiv"+(a+2)).show(),$("#holderDiv"+(a+3)).show(),$("#holderDiv"+(a+4)).hide(),$("#holderDiv"+(a-3)).addClass("focus3"),$("#holderDiv"+(a-3)).removeClass("focus2"),$("#holderDiv"+(a-2)).addClass("focus2"),$("#holderDiv"+(a-2)).removeClass("focus1"),$("#holderDiv"+(a-2)).removeClass("focus3"),$("#holderDiv"+(a-1)).addClass("focus1"),$("#holderDiv"+(a-1)).removeClass("focus"),$("#holderDiv"+(a-1)).removeClass("focus2"),$("#holderDiv"+a).addClass("focus"),$("#holderDiv"+a).removeClass("focus1"),$("#holderDiv"+(a+1)).addClass("focus1"),$("#holderDiv"+(a+1)).removeClass("focus"),$("#holderDiv"+(a+1)).removeClass("focus2"),$("#holderDiv"+(a+2)).addClass("focus2"),$("#holderDiv"+(a+2)).removeClass("focus1"),$("#holderDiv"+(a+2)).removeClass("focus3"),$("#holderDiv"+(a+3)).addClass("focus3"),$("#holderDiv"+(a+3)).removeClass("focus2"),$("#holderDiv"+a).hasClass("target")||$("#holderDiv"+a).hasClass("noise")||$("#holderDiv"+a).addClass("noise"),$("#progressCNT").html(a+1+"/"+data.length)}function start(){hasFocus=!0,instructionPage?(instructionPage=!1,$("#startButton").html("Instruction"),$("#submitButton").show(),$("#progressDiv").show(),checkDisplay(),eventScript=eventScript+currentTime()+"wk;"):(instructionPage=!0,$("#startButton").html("Back to work"),$("#submitButton").hide(),$("#progressDiv").hide(),$("#instrDiv").show(),$("#loadingDiv").hide(),$("#contentDiv").hide(),eventScript=eventScript+currentTime()+"in;")}function imageLoaded(a){loadedCount+=1,checkDisplay(),eventScript=eventScript+currentTime()+"ld"+a+";"}function checkDisplay(){loadedCount<data.length&&hasFocus&&($("#instrDiv").hide(),$("#loadingDiv").show(),$("#contentDiv").hide()),loadedCount!=data.length||hasFocus||($("#instrDiv").show(),$("#loadingDiv").hide(),$("#contentDiv").hide()),loadedCount==data.length&&hasFocus&&($("#instrDiv").hide(),$("#loadingDiv").hide(),$("#contentDiv").show())}function gup(a){a=a.replace(/[\[]/,"\\[").replace(/[\]]/,"\\]");var b="[\\?&]"+a+"=([^&#]*)",c=new RegExp(b),d=c.exec(window.location.href);return null==d?"NO_VAL":d[1]}function loadData(){for(var a=0;a<data.length;a++)"truth"in data[a]&&testCount++;for(var a=-4;0>a;a++)$("#contentDiv").append('<div style="display: none;" id="holderDiv'+a+'"></div>');for(var a=0;a<data.length;a++)$("#contentDiv").append('<div style="display: none;" id="holderDiv'+a+'"><p>No</p><p>Yes</p></div>');for(var a=data.length;a<data.length+4;a++)$("#contentDiv").append('<div style="display: none;" id="holderDiv'+a+'"></div>');for(var a=0;a<data.length;a++)$("#holderDiv"+a).append('<img id="holderImage'+a+'" src=""/>'),$("#holderImage"+a).load(imageLoaded(a)),$("#holderImage"+a).attr("src",data[a].image);currentIndex=0,imageCount=data.length,displayFrame(0)}function getTodoCnt(){for(var a=0,b=0;b<data.length;b++)$("#holderDiv"+b).hasClass("target")||$("#holderDiv"+b).hasClass("noise")||++a;return a}function updateSubmitButton(){if("ASSIGNMENT_ID_NOT_AVAILABLE"==assignmentId)document.getElementById("submitButton").disabled="disabled",document.getElementById("submitButton").value="You must ACCEPT the HIT before you can submit the results.";else{var a=getTodoCnt();0==a?(document.getElementById("submitButton").disabled="",document.getElementById("submitButton").value="Submit"):(document.getElementById("submitButton").disabled="disabled",document.getElementById("submitButton").value="Submit ("+a+" images left)")}}function confirmSubmit(){eventScript=eventScript+currentTime()+"sm;";for(var a="",b=0;b<data.length;b++)a+=$("#holderDiv"+b).hasClass("target")?"1":"0";$("#answer").val(a),correctCount=0;for(var b=0;b<data.length;b++)if("truth"in data[b]){var c=$("#holderDiv"+b).hasClass("target");c==data[b].truth&&correctCount++}return correctCount/testCount>=.95?($("#event").val(eventScript),!0):correctCount/testCount>=.9?(eventScript=eventScript+currentTime()+"ak"+correctCount/testCount+";",$("#event").val(eventScript),confirm("You accuracy seems low. Are you sure you want to submit now? Click [Cancel] to go back and refine the results.")):(eventScript=eventScript+currentTime()+"rj;",alert("You accuracy is too low! You are not allowed to submit. Click [Cancel] to refine the results."),!1)}function leftButtonFun(){currentIndex=0,displayFrame(currentIndex),eventScript=eventScript+currentTime()+"be;"}function rightButtonFun(){currentIndex=data.length-1,displayFrame(currentIndex),eventScript=eventScript+currentTime()+"en;",updateSubmitButton()}var maxNumExample=25,currentIndex=-5,timerHandle,keyIsDown=!1,testCount=0,correctCount=0,eventScript="";$(window).keydown(function(a){a.preventDefault();var b=a.which|a.keyCode;eventScript=eventScript+currentTime()+"up"+b+";",keyIsDown||((39===b||68==b)&&(keyIsDown=!0,currentIndex+1<data.length&&(currentIndex+=1,displayFrame(currentIndex)),timerHandle=setInterval(function(){currentIndex+1<data.length?(currentIndex+=1,displayFrame(currentIndex)):clearInterval(timerHandle)},400)),(37===b||65==b)&&(keyIsDown=!0,currentIndex-1>=0&&(currentIndex-=1,displayFrame(currentIndex)),timerHandle=setInterval(function(){currentIndex-1>=0?(currentIndex-=1,displayFrame(currentIndex)):clearInterval(timerHandle)},400))),updateSubmitButton()}),$(window).keyup(function(a){a.preventDefault();var b=a.which|a.keyCode;eventScript=eventScript+currentTime()+"up"+b+";",32===b&&answerHit(),(37===b||65==b||39===b||68==b)&&(clearInterval(timerHandle),keyIsDown=!1),updateSubmitButton()});var hasFocus=!1,instructionPage=!0,loadedCount=0,workerId,assignmentId,hitId,gameId;$(document).ready(function(){""!=definition&&$("#definitionDiv").html("<p><b>Definition</b>: "+definition+".</p>"),$("#imageCount").html(data.length),"ASSIGNMENT_ID_NOT_AVAILABLE"!=assignmentId&&(document.getElementById("submitButton").value="Submit ("+data.length+" images left)"),$("#startButton").show();var a="";a+='<div class="noise example"><p>No Single Object</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/delicatessen_6fb94e2e384ae28e189d4059d8dc8efd.jpg"></div>',a+='<div class="noise example"><p>No Text Overlay</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/office_cubicles_0a63c4fed19394584c17655b66551afe.jpg"></div>',a+='<div class="noise example"><p>No Drawing</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/office_cubicles_594262350a90f73e693d32f99cc2c01f.jpg"></div>',a+='<div class="noise example"><p>No Screenshot</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/cybercafe_c443a65367506809a852d29ffa9847b9.jpg"></div>',a+='<div class="noise example"><p>No Graphics</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/office_cubicles_00de42d92327b8f66ef7e0cddfa81f84.jpg"></div>',a+='<div class="noise example"><p>No Bad Photo</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/cybercafe_2a150d58e415aad1eec95efc7cead821.jpg"></div>',a+='<div class="noise example"><p>Not Only Logo</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/delicatessen_1f6af3b25603aa9c3ea8ef0fc82b6ac6.jpg"></div>',a+='<div class="noise example"><p>No Magazine/Newspaper</p><p>Yes</p><br><img src="http://gigasun.csail.mit.edu/instruction/cybercafe_c4754a383af732b49bc6912c1d18f7d7.jpg"></div>';for(var b=0;b<Math.min(examples.length,maxNumExample-3);++b)a+='<div class="',a+=examples[b].truth?"target":"noise",a+=' example"><p>No</p><p>Yes</p><br/><img src="',a+=examples[b].image,a+='" /></div>';$("#exampleDiv").html(a),workerId=gup("workerId"),assignmentId=gup("assignmentId"),"ASSIGNMENT_ID_NOT_AVAILABLE"==assignmentId?($("#startButton").html("accept the hit first before you can start"),$("#startButton").attr("disabled","disabled")):($("#startButton").html("Start"),$("#startButton").removeAttr("disabled"),eventScript=eventScript+currentTime()+"ac;"),hitId=gup("hitId"),gameId=gup("gameId"),loadData()});
+</script>
+<div id="instructionDiv" style="width: 822px; height: 30px; text-align: center; margin-left: auto; margin-right: auto; font-size:30px; font-weight:bold;"><button id="startButton" onclick="start(); " style="display: none;" type="button">Start</button>&nbsp; Is this <span style="color: #00F;">${question}</span>?&nbsp; <input autocomplete="off" disabled="disabled" id="submitButton" onclick="return confirmSubmit()" style="display: none;" type="submit" value="Submit" /> <input autocomplete="off" id="answer" name="answer" type="hidden" value="" /> <input autocomplete="off" id="event" name="event" type="hidden" value="" /></div>
+
+<div id="definitionDiv" style="width: 822px; margin-left: auto; margin-right: auto; z-index: 10px; text-align: center; ">&nbsp;</div>
+
+<div id="loadingDiv" style="width: 822px; height: 440px; text-align: center;  margin-left: auto; margin-right: auto; display: none; "><br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+Images are loading ...<br />
+<br />
+<img src="http://vision.cs.princeton.edu/web/splashScreenImage.gif" /></div>
+
+<div id="contentDiv" style="width: 822px; height: 440px; text-align: center;  margin-left: auto; margin-right: auto; font-size: 13pt; display: none; ">&nbsp;</div>
+
+<div id="progressDiv" style="text-align: center; display: none; padding-top: 45px;"><button id="leftButton" onclick="leftButtonFun(); " type="button"><img src="http://gigasun.csail.mit.edu/instruction/left.png" /></button>&nbsp; <span id="progressCNT" style="font-size:14px; font-weight: normal;">N/N</span> &nbsp;<button id="rightButton" onclick="rightButtonFun(); " type="button"><img src="http://gigasun.csail.mit.edu/instruction/right.png" /></button></div>
+
+<div id="instrDiv" style="width: 822px; margin-left: auto; margin-right: auto; z-index: 10px; ">
+<h3 style="margin-top: 0; margin-bottom: 0;">Task</h3>
+
+<p>For each of the <span id="imageCount" style="font-weight: bold; color: #00F;">N</span> images, answer yes or no to the above question. Only answer <b style="font-weight: bold; color: #0B0;">Yes</b> to <b style="font-weight: bold; color: #00F;">real photos</b>. Always answer <b style="font-weight: bold; color: #F00;">No</b> to <b style="font-weight: bold; color: #F00;">cartoon</b>, <b style="font-weight: bold; color: #F00;">drawing</b>, <b style="font-weight: bold; color: #F00;">CG rendering</b>, or real photos with a <b style="font-weight: bold; color: #F00;">large text overlay</b> on the photo. Here are some examples:</p>
+
+<ul>
+</ul>
+
+<div id="exampleDiv" style="text-align: center; margin-top: 0;">&nbsp;</div>
+
+<h3 style="margin-top: 0; margin-bottom: 0;">Usage</h3>
+<img src="http://gigasun.csail.mit.edu/instruction/keyboard_small.jpg" style="float : right; width: 45%; margin : 0 0 0px 10px;" />
+<ul>
+	<li>Keep the right arrow [&rarr;] key (or [d] key) pressed down to move continuously from an image to the next. Release the key when you see an image for which the answer should be YES.</li>
+	<li>Use [space] key to toggle the answer to YES. The default answer is NO.</li>
+	<li>Use the left arrow [&larr;] key (or [a] key) to go back to the previously seen images, if you skipped an image accidentaly.</li>
+</ul>
+
+<h3 style="margin-top: 0; margin-bottom: 0;">Submit</h3>
+
+<ul>
+	<li>After you answer all the images, the [submit] button will be enabled.</li>
+	<li><b style="color: #00F;">If your accuracy is too low, it won&#39;t allow you to submit. You will have to improve your answers first.</b></li>
+</ul>
+
+<p style="font-size: 8pt; color: #999;">By making judgments about these images, you are participating in a study being performed by XXX. If you have questions about this research, please contact XXX at XXX. Your participation in this research is voluntary. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.</p>
+</div>
+
+

@@ -1,0 +1,1634 @@
+<html>
+<head>
+<title>Princeton Vision Viewer</title>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script type="text/javascript" src="js/gl-matrix-min.js"></script>
+<script type="text/javascript" src="js/webgl-utils.js"></script>
+
+<style type="text/css">
+html, body {
+    margin:0;
+    padding:0;
+    height:100%; 
+} 
+#canvas3D { 
+    position:absolute; 
+    display:block;
+    background:#c00; 
+    height:100%; 
+    width:100%;
+    border: none;
+    cursor: default; 
+}
+</style>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+    varying vec2 vTextureCoord;
+    varying vec4 vColor;
+    uniform sampler2D uSampler;
+    void main(void) {
+        if (vColor[3] == 0.0){
+            gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        }else{
+            gl_FragColor = vColor;
+        }
+    }
+</script>
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec2 aTextureCoord;
+    attribute vec4 aVertexColor;
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform float uPointSize;
+    varying vec2 vTextureCoord;
+    varying vec4 vColor;
+    void main(void) {
+        gl_PointSize = uPointSize;
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vTextureCoord = aTextureCoord;
+        vColor = aVertexColor;
+    }
+</script>
+<script type="text/javascript">
+    // global variables:
+    var scene; // the scene read from scene file
+    var scene2render=new Object(); // webGL scene
+    var canvas;
+    var gl;
+    var shaderProgram;
+    var mvMatrix = mat4.create();
+    var mvMatrixStack = [];
+    var pMatrix = mat4.create();
+    var noColorBuffer;
+    var maxVertexNumber = 30*60*6;
+    var labelColorBuffer = [];
+    var labelColors = [
+        [0.121569, 0.466667, 0.705882, 1],
+        [0.682353, 0.780392, 0.909804, 1],
+        [1.000000, 0.498039, 0.054902, 1],
+        [1.000000, 0.733333, 0.470588, 1],
+        [0.172549, 0.627451, 0.172549, 1],
+        [0.596078, 0.874510, 0.541176, 1],
+        [0.839216, 0.152941, 0.156863, 1],
+        [1.000000, 0.596078, 0.588235, 1],
+        [0.580392, 0.403922, 0.741176, 1],
+        [0.772549, 0.690196, 0.835294, 1],
+        [0.549020, 0.337255, 0.294118, 1],
+        [0.768627, 0.611765, 0.580392, 1],
+        [0.890196, 0.466667, 0.760784, 1],
+        [0.968627, 0.713725, 0.823529, 1],
+        [0.498039, 0.498039, 0.498039, 1],
+        [0.780392, 0.780392, 0.780392, 1],
+        [0.737255, 0.741176, 0.133333, 1],
+        [0.858824, 0.858824, 0.552941, 1],
+        [0.090196, 0.745098, 0.811765, 1],
+        [0.619608, 0.854902, 0.898039, 1],
+        [0.552941, 0.827451, 0.780392, 1],
+        [1.000000, 1.000000, 0.701961, 1],
+        [0.745098, 0.729412, 0.854902, 1],
+        [0.984314, 0.501961, 0.447059, 1],
+        [0.501961, 0.694118, 0.827451, 1],
+        [0.992157, 0.705882, 0.384314, 1],
+        [0.701961, 0.870588, 0.411765, 1],
+        [0.988235, 0.803922, 0.898039, 1],
+        [0.850980, 0.850980, 0.850980, 1],
+        [0.737255, 0.501961, 0.741176, 1],
+        [0.800000, 0.921569, 0.772549, 1],
+        [1.000000, 0.929412, 0.435294, 1],
+        [0.894118, 0.101961, 0.109804, 1],
+        [0.215686, 0.494118, 0.721569, 1],
+        [0.301961, 0.686275, 0.290196, 1],
+        [0.596078, 0.305882, 0.639216, 1],
+        [1.000000, 0.498039, 0.000000, 1],
+        [1.000000, 1.000000, 0.200000, 1],
+        [0.650980, 0.337255, 0.156863, 1],
+        [0.968627, 0.505882, 0.749020, 1],
+        [0.600000, 0.600000, 0.600000, 1],
+        [0.384314, 0.117647, 0.082353, 1],
+        [0.898039, 0.564706, 0.462745, 1],
+        [0.070588, 0.552941, 0.803922, 1],
+        [0.031373, 0.235294, 0.321569, 1],
+        [0.392157, 0.772549, 0.949020, 1],
+        [0.380392, 0.686275, 0.686275, 1],
+        [0.058824, 0.450980, 0.411765, 1],
+        [0.611765, 0.615686, 0.631373, 1],
+        [0.211765, 0.368627, 0.588235, 1],
+        [0.596078, 0.200000, 0.203922, 1],
+        [0.466667, 0.592157, 0.239216, 1],
+        [0.364706, 0.262745, 0.486275, 1],
+        [0.211765, 0.525490, 0.623529, 1],
+        [0.819608, 0.439216, 0.184314, 1],
+        [0.505882, 0.592157, 0.772549, 1],
+        [0.768627, 0.498039, 0.501961, 1],
+        [0.674510, 0.768627, 0.517647, 1],
+        [0.596078, 0.529412, 0.690196, 1],
+        [0.176471, 0.345098, 0.541176, 1],
+        [0.345098, 0.584314, 0.298039, 1],
+        [0.913725, 0.627451, 0.266667, 1],
+        [0.756863, 0.184314, 0.196078, 1],
+        [0.447059, 0.243137, 0.466667, 1],
+        [0.490196, 0.501961, 0.498039, 1],
+        [0.611765, 0.619608, 0.870588, 1],
+        [0.450980, 0.458824, 0.709804, 1],
+        [0.290196, 0.333333, 0.517647, 1],
+        [0.807843, 0.858824, 0.611765, 1],
+        [0.709804, 0.811765, 0.419608, 1],
+        [0.549020, 0.635294, 0.321569, 1],
+        [0.388235, 0.474510, 0.223529, 1],
+        [0.905882, 0.796078, 0.580392, 1],
+        [0.905882, 0.729412, 0.321569, 1],
+        [0.741176, 0.619608, 0.223529, 1],
+        [0.549020, 0.427451, 0.192157, 1],
+        [0.905882, 0.588235, 0.611765, 1],
+        [0.839216, 0.380392, 0.419608, 1],
+        [0.678431, 0.286275, 0.290196, 1],
+        [0.517647, 0.235294, 0.223529, 1],
+        [0.870588, 0.619608, 0.839216, 1],
+        [0.807843, 0.427451, 0.741176, 1],
+        [0.647059, 0.317647, 0.580392, 1],
+        [0.482353, 0.254902, 0.450980, 1],
+        [0.000000, 0.000000, 0.000000, 1],
+        [0.000000, 0.000000, 1.000000, 1]
+    ];    
+    var pointCloudPositionBuffer;
+    var pointCloudColorBuffer;
+    var cameraColorBuffer;
+    var pointCloudLoaded = 0;
+
+
+    // Utility functions
+
+    function deg2rad(degrees) {
+        return degrees * Math.PI / 180;
+    }
+
+    function rad2deg(rad) {
+        return rad * 180 / Math.PI;
+    }
+
+    // Get Url Parameters
+    function gup(name) {
+        name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+        var regexS = "[\\?&]"+name+"=([^&#]*)";
+        var regex = new RegExp( regexS );
+        var results = regex.exec( window.location.href );
+        if( results == null )
+            return "";
+        else
+        return results[1];
+    }
+    
+    // WebGL functions
+    function initGL(canvas) {
+        try {
+            gl = canvas.getContext("experimental-webgl");
+        } catch (e) {
+        }
+        if (!gl) {
+            alert("Could not initialise WebGL, sorry :-(. Check your browser's WebGL support.");
+        }
+    }
+    function getShader(gl, id) {
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript) {
+            return null;
+        }
+        var str = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            if (k.nodeType == 3) {
+                str += k.textContent;
+            }
+            k = k.nextSibling;
+        }
+        var shader;
+        if (shaderScript.type == "x-shader/x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } else if (shaderScript.type == "x-shader/x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } else {
+            return null;
+        }
+        gl.shaderSource(shader, str);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+        return shader;
+    }
+    function initShaders() {
+        var fragmentShader = getShader(gl, "shader-fs");
+        var vertexShader = getShader(gl, "shader-vs");
+        shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            alert("Could not initialise shaders");
+        }
+        gl.useProgram(shaderProgram);
+        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+        shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+        gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute)
+        shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+        gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+        shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
+        shaderProgram.pointSizeUniform = gl.getUniformLocation(shaderProgram, "uPointSize");
+
+        // initialize no color placeholder buffer        
+        noColorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, noColorBuffer);
+        noColorBuffer.itemSize = 4;
+        noColorBuffer.numItems = maxVertexNumber;
+
+
+        var colors_buffer = new ArrayBuffer(4*4*noColorBuffer.numItems);
+        var colors_view   = new Float32Array(colors_buffer);
+
+        var i =0;
+        while (i<4*noColorBuffer.numItems){
+            colors_view[i++] = 1.0;
+            colors_view[i++] = 1.0;
+            colors_view[i++] = 1.0;
+            colors_view[i++] = 0.0;
+        }
+        gl.bufferData(gl.ARRAY_BUFFER, colors_view, gl.STATIC_DRAW);
+
+
+
+        //var colors = new Array();
+        //for (var i=0;i<noColorBuffer.numItems; ++i){
+        //    colors.push(1.0);
+        //    colors.push(1.0);
+        //    colors.push(1.0);
+        //    colors.push(0.0);
+        //}
+        //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        // initialize no texture placeholder buffer        
+        noTextureBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, noTextureBuffer);
+        noTextureBuffer.itemSize = 2;
+        noTextureBuffer.numItems = maxVertexNumber;
+
+
+        var textureCoord_buffer = new ArrayBuffer(4*2*noTextureBuffer.numItems); // typed array all pre-initialized to 0
+        var textureCoord_view   = new Float32Array(textureCoord_buffer);
+        //for( var i =0; i<noColorBuffer.numItems; ++i){
+        //    textureCoord_view[i] = 0.0;
+        //}
+        gl.bufferData(gl.ARRAY_BUFFER, textureCoord_view, gl.STATIC_DRAW);        
+
+
+        // creat a dummy texture
+
+        dummy_texture = gl.createTexture();
+        dummy_texture.image = new Image();
+        dummy_texture.image.onload = function () {
+            gl.bindTexture(gl.TEXTURE_2D, dummy_texture);
+            //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, dummy_texture.image);
+            //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);        
+            gl.bindTexture(gl.TEXTURE_2D, null);  
+            dummy_texture.loaded = true;    
+        };
+        dummy_texture.image.src = "http://sunannotator.csail.mit.edu/dummytexture.jpg";
+
+        cameraColorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, cameraColorBuffer);
+        var colorCamera = [0.3,0.3,0.3,1.0,0.3,0.3,0.3,1.0,0.3,0.3,0.3,1.0,0.3,0.3,0.3,1.0,0.3,0.3,0.3,1.0];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorCamera), gl.STATIC_DRAW);
+        cameraColorBuffer.itemSize = 4;
+        
+        for (var i=0; i<labelColors.length; i++){
+            labelColorBuffer[i] = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, labelColorBuffer[i]);
+            var color = labelColors[i];
+
+            var unpackedColors_buffer = new ArrayBuffer(4*4*maxVertexNumber);
+            var unpackedColors_view   = new Float32Array(unpackedColors_buffer);
+            var j =0;
+            while (j<4*maxVertexNumber){
+                unpackedColors_view[j++] = color[0];
+                unpackedColors_view[j++] = color[1];
+                unpackedColors_view[j++] = color[2];
+                unpackedColors_view[j++] = color[3];
+            }
+            gl.bufferData(gl.ARRAY_BUFFER, unpackedColors_view, gl.STATIC_DRAW);
+
+            //var unpackedColors = [];
+            //for (var j=0; j < maxVertexNumber; j++) {
+            //    unpackedColors = unpackedColors.concat(color);
+            //}
+            //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(unpackedColors), gl.STATIC_DRAW);
+
+            labelColorBuffer[i].itemSize = 4;
+        }
+                
+        gl.enable(0x8642);
+    }
+    function mvPushMatrix() {
+        var copy = mat4.create();
+        mat4.set(mvMatrix, copy);
+        mvMatrixStack.push(copy);
+    }
+    function mvPopMatrix() {
+        if (mvMatrixStack.length == 0) {
+            throw "Invalid popMatrix!";
+        }
+        mvMatrix = mvMatrixStack.pop();
+    }
+    function setMatrixUniforms() {
+        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    }
+    
+    // handle window resize
+    function winSizeChange() {
+        canvas.width = $(window).width();
+        canvas.height = $(window).height();            
+        //render again
+        render();      
+    }
+    var resizeTimer;
+    $(window).resize(function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(winSizeChange, 100);
+    });
+    
+    // IO
+    var mouseDown   = false;
+    var mouseButton = "none";
+    var mousePrevXY = new Object();
+    var labelingObject = new Object();
+    labelingObject.x = [];
+    labelingObject.y = [];
+    labelingObject.vertexPositionData = [];
+    labelingObject.indexData = [];
+    selectedTool = -1;
+    var selectObjectID = -1;
+    var mouseoverObjectID = -1;
+    var adjustObjectID = -1;
+    var adjustKeypointID = -1;
+    
+    var show_ims = true;
+    var pointSize = 2.;
+    var keys = {};
+    
+    $(document).keydown(function (e) {
+        console.log(String.fromCharCode(e.which).toLowerCase());
+        keys[String.fromCharCode(e.which).toLowerCase()] = true;
+        handleKeyPress(e);
+    });
+
+    $(document).keyup(function (e) {
+        delete keys[String.fromCharCode(e.which).toLowerCase()];
+        handleKeyPress(e);
+    });
+    function handleKeyPress(e) {
+        var dx = 0;
+        var dy = 0;
+        var dz = 0;
+        //var delta = 0.04;
+        var delta = 0.02;
+        //var delta = 0.1;
+        if (e.shiftKey) {
+            delta *= 4;
+        }
+        var c = String.fromCharCode(e.charCode);
+        //  if (c == 'W' || c == 'S' || c == 'A' || c == 'D' || c == 'R' || c == 'F') {
+        //    delta = 4*delta;
+        //  }
+        //alert(keys['w']);
+
+
+        if (! $("#dialogNew").data("dialog").isOpen() && ! $("#dialog").data("dialog").isOpen() && ! $("#dialogLogin").data("dialog").isOpen() ){
+            if (keys['w']) dz = delta;
+            if (keys['s']) dz = -delta;
+            if (keys['a']) dx = delta;
+            if (keys['d']) dx = -delta;
+            if (keys['r']) dy = -delta;
+            if (keys['f']) dy = delta;            
+
+            //left
+            if (keys['%']){
+                var tmpMat =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+                mat4.transpose(scene2render.viewer_rotation,tmpMat);
+                var posX=[1,0,0];   mat4.multiplyVec3(tmpMat,posX);
+                var posY=[0,1,0];   mat4.multiplyVec3(tmpMat,posY);
+                //mat4.rotate(scene2render.viewer_rotation, Math.PI*5/180,  posX);
+                mat4.rotate(scene2render.viewer_rotation, -Math.PI*15/180,  posY);
+            }
+            //right
+            if (keys['\'']){
+                var tmpMat =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+                mat4.transpose(scene2render.viewer_rotation,tmpMat);
+                var posX=[1,0,0];   mat4.multiplyVec3(tmpMat,posX);
+                var posY=[0,1,0];   mat4.multiplyVec3(tmpMat,posY);
+                //mat4.rotate(scene2render.viewer_rotation, Math.PI*5/180,  posX);
+                mat4.rotate(scene2render.viewer_rotation, Math.PI*15/180,  posY);
+            }
+            //up
+            if (keys['&']){
+                var tmpMat =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+                mat4.transpose(scene2render.viewer_rotation,tmpMat);
+                var posX=[1,0,0];   mat4.multiplyVec3(tmpMat,posX);
+                var posY=[0,1,0];   mat4.multiplyVec3(tmpMat,posY);
+                mat4.rotate(scene2render.viewer_rotation, -Math.PI*15/180,  posX);
+            }
+            //down
+            if (keys['(']){
+                var tmpMat =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+                mat4.transpose(scene2render.viewer_rotation,tmpMat);
+                var posX=[1,0,0];   mat4.multiplyVec3(tmpMat,posX);
+                var posY=[0,1,0];   mat4.multiplyVec3(tmpMat,posY);
+                mat4.rotate(scene2render.viewer_rotation, Math.PI*15/180,  posX);
+            }
+
+        }
+
+        translate(dx, dy, dz);
+
+        if (keys['t']) {
+            show_ims = !show_ims;
+        }
+        if (keys['p']) {
+            pointSize += 1.;
+        }
+        if (keys['o']) {
+            pointSize = Math.max(1., pointSize-1);
+        }
+        
+        // hide cursor for making video
+        //if (keys['h']) {
+        //    document.getElementById('canvasPanel').style.cursor = "none";                                                           
+        //}
+
+        // output model view matrix
+        //if (keys['m']) {
+        //    var arr = [];
+        //    for (var i=0; i<scene2render.viewer_rotation.length; i++) {
+        //        arr[i] = scene2render.viewer_rotation[i];
+        //    }
+        //    alert(scene2render.cameras[scene2render.active_camera_id].modelview + ", " + arr);
+        //}
+        
+        // if you press n, it displays only those points with alpha = -n
+        //for (var i = 0; i < 9; i++) {
+        //    if (keys['' + i]) {
+        //        gl.uniform1f(shaderProgram.showAlpha, i);
+        //    }
+        //}
+
+        render();
+    }
+    
+    function translate(dx, dy, dz) {
+        if (dx !=0 || dy !=0 || dz !=0){
+            if (scene2render.active_camera_id != scene2render.cameras.length-1){
+                // copy the camera
+                scene2render.cameras[scene2render.cameras.length-1].modelview = scene.cameras[scene2render.active_camera_id].modelview.slice(0);
+                scene2render.active_camera_id = scene2render.cameras.length-1;
+            }
+
+            var tmpMat =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+            var tmpMat2 =[1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+            var tmpMat3 =[1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+            mat4.multiply(scene2render.viewer_rotation,scene2render.cameras[scene2render.active_camera_id].modelview,tmpMat);
+            scene2render.cameras[scene2render.active_camera_id].modelview = tmpMat;
+            mat4.identity(scene2render.viewer_rotation);
+
+            if (event.ctrlKey){
+                mat4.translate(tmpMat2, [0,0,dy]);
+                //mat4.translate(scene2render.cameras[scene2render.active_camera_id].modelview, [0,0,dy]);
+            }else{
+                mat4.translate(tmpMat2, [dx, dy, dz]);
+                //mat4.translate(scene2render.cameras[scene2render.active_camera_id].modelview, [dx, dy, 0]);
+            }
+            mat4.multiply(tmpMat2,scene2render.cameras[scene2render.active_camera_id].modelview,tmpMat3);
+            scene2render.cameras[scene2render.active_camera_id].modelview = tmpMat3;
+        }
+    }
+
+
+
+
+    function handleMouseDown(event) {
+        mouseDown = true;
+        if (event.button == 0){
+            mouseButton = 'left';
+            if (adjustObjectID!=-1){
+                adjustKeypointID = -1;
+
+                // angle base testing
+
+                if (scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane == "panorama360"){
+
+                    direction_event = imageLocationUnitVector(event.clientX, event.clientY, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane );
+                    //console.log(direction_event);
+
+                    for (var i=0; i<scene.objects[adjustObjectID].points.length && adjustKeypointID==-1; ++i){
+                        for (var j=0;j<scene.objects[adjustObjectID].points[i].projection.length; ++j){
+                            if (scene.objects[adjustObjectID].points[i].projection[j].camera == scene2render.active_camera_id){
+                                var yaw_pt = scene.objects[adjustObjectID].points[i].projection[j].position2D.x * 2.0 * Math.PI / scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].resolution.width - Math.PI;
+                                var pitch_pt = scene.objects[adjustObjectID].points[i].projection[j].position2D.y * Math.PI / scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].resolution.height - 0.5 * Math.PI;
+
+                                //console.log(yaw_pt);
+                                //console.log(pitch_pt);
+
+                                var direction_pt = [Math.sin(yaw_pt) * Math.cos(pitch_pt), - Math.sin(pitch_pt), - Math.cos(yaw_pt) * Math.cos(pitch_pt)];
+
+                                console.log(direction_pt);                            
+
+                                if ( direction_event[0]*direction_pt[0]+direction_event[1]*direction_pt[1]+direction_event[2]*direction_pt[2] > Math.cos(1/180 * Math.PI) ){
+                                    adjustKeypointID = i;
+                                    break;                                
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    location_min = imageLocation(event.clientX-6, event.clientY-6, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane );
+                    location_max = imageLocation(event.clientX+6, event.clientY+6, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane );
+
+                    if ( location_min.y > location_max.y ){
+                        var tmp = location_max.y;
+                        location_max.y = location_min.y;
+                        location_min.y = tmp;
+                    }
+                    if ( location_min.x > location_max.x ){
+                        var tmp = location_max.x;
+                        location_max.x = location_min.x;
+                        location_min.x = tmp;
+                    }
+
+                    for (var i=0; i<scene.objects[adjustObjectID].points.length && adjustKeypointID==-1; ++i){
+                        for (var j=0;j<scene.objects[adjustObjectID].points[i].projection.length; ++j){
+                            if (scene.objects[adjustObjectID].points[i].projection[j].camera == scene2render.active_camera_id){
+                                var px = scene.objects[adjustObjectID].points[i].projection[j].position2D.x;
+                                var py = scene.objects[adjustObjectID].points[i].projection[j].position2D.y;
+
+                                if ( location_min.y <= py && py <= location_max.y && location_min.x <= px && px <= location_max.x  ){
+                                    adjustKeypointID = i;
+                                    break;                                
+                                }
+                            }
+                        }
+                    }
+                }
+
+                //if (adjustKeypointID==-1){
+                //    adjustObjectID = -1;
+                //    saveScene();
+                //    render();
+                //}
+            }
+        }else if (event.button == 2)
+            mouseButton = 'right';
+        else
+            mouseButton = 'middle';
+            
+        mousePrevXY.X = event.clientX;
+        mousePrevXY.Y = event.clientY;
+        mousePrevXY.status = 'down';
+    }
+
+    
+    function handleMouseMove(event) {
+        if (mouseDown){
+            switch (mouseButton){
+                case 'left':
+                    if (adjustObjectID !=-1 && adjustKeypointID != -1){
+
+                        var locationImage = imageLocation(event.clientX, event.clientY, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane);
+                        var vertexPositionData = [];
+
+                        for (var j=0;j<scene.objects[adjustObjectID].points[adjustKeypointID].projection.length; ++j){
+                            if (scene.objects[adjustObjectID].points[adjustKeypointID].projection[j].camera == scene2render.active_camera_id){
+                                scene.objects[adjustObjectID].points[adjustKeypointID].projection[j].position2D.x = locationImage.x;
+                                scene.objects[adjustObjectID].points[adjustKeypointID].projection[j].position2D.y = locationImage.y;
+
+                                for (var k=0; k<scene.objects[adjustObjectID].points.length; ++k){
+                                    locationImage = scene.objects[adjustObjectID].points[k].projection[j].position2D;
+                                    location3D = imageTo3D(locationImage, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane == "panorama360", scene2render.active_camera_id, scene2render.active_image_id, 0.7);
+                                    vertexPositionData.push(location3D.X);
+                                    vertexPositionData.push(location3D.Y);
+                                    vertexPositionData.push(location3D.Z);
+                                }
+                                break;
+                            }
+                        }
+                        for (var j=0;j<scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D.length; ++j){
+                            if (scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[j].object_id == adjustObjectID){
+                                scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[j].Position = gl.createBuffer();
+                                gl.bindBuffer(gl.ARRAY_BUFFER, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[j].Position);
+                                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositionData), gl.STATIC_DRAW);
+                                scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[j].Position.itemSize = 3;
+                                scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[j].Position.numItems = vertexPositionData.length / 3;                                
+                            }
+                        }
+
+                    }else{
+                        var dx = Math.PI*0.25*(event.clientX - mousePrevXY.X)/canvas.height;
+                        var dy = Math.PI*0.25*(event.clientY - mousePrevXY.Y)/canvas.height;
+
+                        var tmpMat =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+                        mat4.transpose(scene2render.viewer_rotation,tmpMat);
+
+                        if (event.ctrlKey){
+                            var posZ=[0,0,1];
+                            mat4.multiplyVec3(tmpMat,posZ);
+                            mat4.rotate(scene2render.viewer_rotation, dy,  posZ);
+
+                            //mat4.rotate(scene2render.viewer_rotation, dy,  [0, 0, 1]);
+                        }else{
+                            var posX=[1,0,0];
+                            var posY=[0,1,0];
+                            mat4.multiplyVec3(tmpMat,posX);
+                            mat4.multiplyVec3(tmpMat,posY);
+
+                            mat4.rotate(scene2render.viewer_rotation, dy,  posX);
+                            mat4.rotate(scene2render.viewer_rotation, dx,  posY);
+                            //mat4.rotate(scene2render.viewer_rotation, dx,  [0, 1, 0]);
+                            //mat4.rotate(scene2render.viewer_rotation, dy,  [1, 0, 0]);
+                        }
+                    }
+                
+                    render();
+                    break;
+                case 'right':
+                    scene2render.viewer_fovHeight *= Math.pow(2, (event.clientY - mousePrevXY.Y)/canvas.height);
+                    if (scene2render.viewer_fovHeight > Math.PI*150/180)            scene2render.viewer_fovHeight = Math.PI*150/180;
+                    else if (scene2render.viewer_fovHeight < Math.PI*1/180)         scene2render.viewer_fovHeight = Math.PI*1/180;
+                    render();
+                    break;
+                case 'middle':
+                    if (scene2render.active_camera_id != scene2render.cameras.length-1){
+                        // copy the camera
+                        scene2render.cameras[scene2render.cameras.length-1].modelview = scene.cameras[scene2render.active_camera_id].modelview.slice(0);
+
+                        scene2render.active_camera_id = scene2render.cameras.length-1;
+                    }
+                    var dx = (event.clientX - mousePrevXY.X)/canvas.height * 5.0;
+                    var dy = (event.clientY - mousePrevXY.Y)/canvas.height * 5.0;
+                    dy = -dy;
+
+                    var tmpMat =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+                    var tmpMat2 =[1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+                    var tmpMat3 =[1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+                    mat4.multiply(scene2render.viewer_rotation,scene2render.cameras[scene2render.active_camera_id].modelview,tmpMat);
+                    scene2render.cameras[scene2render.active_camera_id].modelview = tmpMat;
+                    mat4.identity(scene2render.viewer_rotation);
+                    
+                    if (event.ctrlKey){
+                        mat4.translate(tmpMat2, [0,0,dy]);
+                        //mat4.translate(scene2render.cameras[scene2render.active_camera_id].modelview, [0,0,dy]);
+                    }else{
+                        mat4.translate(tmpMat2, [dx, dy, 0]);
+                        //mat4.translate(scene2render.cameras[scene2render.active_camera_id].modelview, [dx, dy, 0]);
+                    }
+                    mat4.multiply(tmpMat2,scene2render.cameras[scene2render.active_camera_id].modelview,tmpMat3);
+                    scene2render.cameras[scene2render.active_camera_id].modelview = tmpMat3;
+
+                    render();
+                    break;
+            }
+            
+            mousePrevXY.X = event.clientX;
+            mousePrevXY.Y = event.clientY;
+            mousePrevXY.status = 'move';
+        }
+    }    
+    function image2render(camera_id,image_id){
+        var imageObject = new Object();
+        imageObject.polygon2D = [];
+        var vertexPositionData = [];
+        
+        if (scene.cameras[camera_id].images[image_id].plane == "panorama360"){
+            // compute the vertices
+        
+            var latitudeBands = 30;
+            var longitudeBands = 60;        
+            var radius = scene.cameras[camera_id].focal_length;
+            var textureCoordData = [];     
+            var indexData = [];           
+            
+            
+            for (var latNumber = 0; latNumber <= latitudeBands; ++latNumber) {
+              var theta = latNumber * Math.PI / latitudeBands;
+              var sinTheta = Math.sin(theta);
+              var cosTheta = Math.cos(theta);
+
+              for (var longNumber = 0; longNumber <= longitudeBands; ++longNumber) {
+                //var phi = longNumber * 2 * Math.PI / longitudeBands;
+                var phi = (- longNumber / longitudeBands + 0.25)  * 2 * Math.PI;
+                var sinPhi = Math.sin(phi);
+                var cosPhi = Math.cos(phi);
+
+                var x = cosPhi * sinTheta;
+                var y = cosTheta;
+                var z = sinPhi * sinTheta;
+                var u = 1 - (longNumber / longitudeBands);
+                var v = 1 - (latNumber / latitudeBands);
+
+                textureCoordData.push(u);
+                textureCoordData.push(v);
+                vertexPositionData.push(radius * x);
+                vertexPositionData.push(radius * y);
+                vertexPositionData.push(radius * z);
+              }
+            }        
+            for (var latNumber = 0; latNumber < latitudeBands; latNumber++) {
+              for (var longNumber = 0; longNumber < longitudeBands; longNumber++) {
+                var first = (latNumber * (longitudeBands + 1)) + longNumber;
+                var second = first + longitudeBands + 1;
+                indexData.push(first);
+                indexData.push(second);
+                indexData.push(first + 1);
+
+                indexData.push(second);
+                indexData.push(second + 1);
+                indexData.push(first + 1);
+              }
+            }
+
+        }else{
+        
+            var textureCoordData = [0,1,1,1,1,0,0,0,0,0];
+            var indexData = [0,1,2,2,3,0];
+            //var indexData = [0,1,2]; //,2,3,0];
+            //var indexData = [2,3,0];
+            var px = scene.cameras[camera_id].images[image_id].principle.x * scene.cameras[camera_id].images[image_id].film.width / scene.cameras[camera_id].images[image_id].resolution.width ;
+            var py = scene.cameras[camera_id].images[image_id].principle.y * scene.cameras[camera_id].images[image_id].film.height/ scene.cameras[camera_id].images[image_id].resolution.height;
+            var rx = scene.cameras[camera_id].images[image_id].film.width - px;
+            var ry = scene.cameras[camera_id].images[image_id].film.height- py;
+            
+            
+
+            vertexPositionData.push(-px);
+            vertexPositionData.push(py);
+            vertexPositionData.push(-scene.cameras[camera_id].focal_length);
+            
+            vertexPositionData.push(rx);
+            vertexPositionData.push(py);
+            vertexPositionData.push(-scene.cameras[camera_id].focal_length);
+            
+            vertexPositionData.push(rx);
+            vertexPositionData.push(-ry);
+            vertexPositionData.push(-scene.cameras[camera_id].focal_length);
+
+            vertexPositionData.push(-px);
+            vertexPositionData.push(-ry);
+            vertexPositionData.push(-scene.cameras[camera_id].focal_length);
+
+            vertexPositionData.push(0);
+            vertexPositionData.push(0);
+            vertexPositionData.push(0);        
+
+
+            var indexEdge = [0,1,1,2,2,3,3,0,0,4,1,4,2,4,3,4];   
+            imageObject.indexEdge = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, imageObject.indexEdge);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexEdge), gl.STATIC_DRAW);
+            imageObject.indexEdge.itemSize = 1;
+            imageObject.indexEdge.numItems = indexEdge.length;                
+            
+        }
+    
+        // transform the vertex
+        var transformMatrix = scene.cameras[camera_id].modelview.slice(0);
+        mat4.inverse(transformMatrix);     
+
+        for (var i=0;i<vertexPositionData.length;i+=3){
+            var pos3 = [vertexPositionData[i],vertexPositionData[i+1],vertexPositionData[i+2]];
+            mat4.multiplyVec3(transformMatrix,pos3);
+            vertexPositionData[i] = pos3[0];
+            vertexPositionData[i+1] = pos3[1];
+            vertexPositionData[i+2] = pos3[2];                
+        }
+                
+    
+        // add to buffer
+        imageObject.TextureCoord = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, imageObject.TextureCoord);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordData), gl.STATIC_DRAW);
+        imageObject.TextureCoord.itemSize = 2;
+        imageObject.TextureCoord.numItems = textureCoordData.length / 2;
+
+        imageObject.Position = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, imageObject.Position);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositionData), gl.STATIC_DRAW);
+        imageObject.Position.itemSize = 3;
+        imageObject.Position.numItems = vertexPositionData.length / 3;
+
+        imageObject.Index = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, imageObject.Index);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
+        imageObject.Index.itemSize = 1;
+        imageObject.Index.numItems = indexData.length;        
+        
+        return imageObject;
+    }    
+
+    function imageTo3D(locationImage, isPanorama, camera_id, image_id, ratio){
+        var location3D = new Object();
+        var pos3 = [0,0,0];
+        if (isPanorama){
+            yaw = (locationImage.x / scene.cameras[camera_id].images[image_id].resolution.width-0.5) * 2.0 * Math.PI;
+            pitch = (locationImage.y / scene.cameras[camera_id].images[image_id].resolution.height-0.5) * Math.PI;
+            pos3[0] = Math.sin(yaw) * Math.cos(-pitch) * scene.cameras[camera_id].focal_length * ratio;
+            pos3[1] = Math.sin(-pitch) * scene.cameras[camera_id].focal_length * ratio;
+            pos3[2] = -Math.cos(yaw) * Math.cos(-pitch) * scene.cameras[camera_id].focal_length * ratio;
+        }else{
+
+            pos3[0] = (locationImage.x - scene.cameras[camera_id].images[image_id].principle.x) * scene.cameras[camera_id].images[image_id].film.width / scene.cameras[camera_id].images[image_id].resolution.width  * ratio;
+            pos3[1] = -(locationImage.y - scene.cameras[camera_id].images[image_id].principle.y) * scene.cameras[camera_id].images[image_id].film.height / scene.cameras[camera_id].images[image_id].resolution.height * ratio;
+            pos3[2] = -scene.cameras[camera_id].focal_length * ratio;
+        }
+
+        mvMatrix = scene.cameras[camera_id].modelview.slice(0);
+        mat4.inverse(mvMatrix);
+        mat4.multiplyVec3(mvMatrix,pos3);
+
+        location3D.X = pos3[0];
+        location3D.Y = pos3[1];
+        location3D.Z = pos3[2];
+        return location3D;
+    }    
+
+
+    function imageLocationUnitVector(x, y, plane){
+        // screen camera coordinate system
+        var locationImage = new Object();
+        var fLength_screen = canvas.height/2 / Math.tan(scene2render.viewer_fovHeight/2);
+        var pos3 = [x - canvas.width*0.5, canvas.height*0.5 - y, -fLength_screen];
+        var posC = [0,0,0];
+
+        // in world coodinate system
+        mat4.multiply(scene2render.viewer_rotation,scene.cameras[scene2render.active_camera_id].modelview,mvMatrix);
+        mat4.inverse(mvMatrix);
+        mat4.multiplyVec3(mvMatrix,pos3);
+        mat4.multiplyVec3(mvMatrix,posC);
+
+        // put into camera coodinate system
+        mvMatrix = scene.cameras[scene2render.active_camera_id].modelview.slice(0);
+        mat4.multiplyVec3(mvMatrix,pos3);
+        mat4.multiplyVec3(mvMatrix,posC);        
+
+        pos3[0] -= posC[0]; pos3[1] -= posC[1]; pos3[2] -= posC[2];
+        var norm = Math.sqrt(pos3[0]*pos3[0]+pos3[1]*pos3[1]+pos3[2]*pos3[2]);
+        pos3[0] /= norm;  pos3[1] /= norm;  pos3[2] /= norm;
+
+        return pos3;
+    }    
+    
+    function imageLocation(x, y, plane){
+        // screen camera coordinate system
+        var locationImage = new Object();
+        var fLength_screen = canvas.height/2 / Math.tan(scene2render.viewer_fovHeight/2);
+        var pos3 = [x - canvas.width*0.5, canvas.height*0.5 - y, -fLength_screen];
+        var posC = [0,0,0];
+
+        // in world coodinate system
+        mat4.multiply(scene2render.viewer_rotation,scene.cameras[scene2render.active_camera_id].modelview,mvMatrix);
+        mat4.inverse(mvMatrix);
+        mat4.multiplyVec3(mvMatrix,pos3);
+        mat4.multiplyVec3(mvMatrix,posC);
+
+        // put into camera coodinate system
+        mvMatrix = scene.cameras[scene2render.active_camera_id].modelview.slice(0);
+        mat4.multiplyVec3(mvMatrix,pos3);
+        mat4.multiplyVec3(mvMatrix,posC);        
+
+        pos3[0] -= posC[0]; pos3[1] -= posC[1]; pos3[2] -= posC[2];
+        var norm = Math.sqrt(pos3[0]*pos3[0]+pos3[1]*pos3[1]+pos3[2]*pos3[2]);
+        pos3[0] /= norm;  pos3[1] /= norm;  pos3[2] /= norm;
+
+
+        if (plane == "panorama360"){
+            var pitch_abs = -Math.asin(pos3[1]);
+            var yaw_abs = Math.asin(pos3[0]/ Math.cos(-pitch_abs));
+            if ( pos3[2] > 0 )  yaw_abs = Math.PI-yaw_abs;
+            while (yaw_abs < -Math.PI) yaw_abs += Math.PI * 2.0;
+            while (yaw_abs >= Math.PI) yaw_abs -= Math.PI * 2.0;                            
+            locationImage.x = (yaw_abs / (2.0 * Math.PI) + 0.5) * scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].resolution.width;
+            locationImage.y = (pitch_abs / Math.PI + 0.5) * scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].resolution.height;    
+        }else{
+            if ( pos3[2] < 0 ){
+                var scale = (-scene.cameras[scene2render.active_camera_id].focal_length)/pos3[2];
+                pos3[0]  *= scale;
+                pos3[1]  *= scale;
+
+                pos3[0] *= scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].resolution.width / scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].film.width;
+                pos3[1] *= scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].resolution.height / scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].film.height;
+
+                pos3[0] += scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].principle.x;
+                pos3[1] = -pos3[1] + scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].principle.y;
+
+                locationImage.x = pos3[0];
+                locationImage.y = pos3[1];
+            }
+        }
+        //alert('x='+locationImage.x+' y='+locationImage.y);
+        return locationImage; 
+    }
+    
+
+    
+    
+    function handleMouseUp(event) {
+        mouseDown = false;
+        switch (mouseButton){ 
+            case 'left':
+
+                if (adjustObjectID !=-1 && adjustKeypointID == -1){
+                    if (mousePrevXY.status == 'down'){
+                        adjustObjectID = -1;
+                        saveScene();
+                        render();
+                    }
+                }
+
+                if (mousePrevXY.status == 'down' && selectedTool >=0 && 0< event.clientX && 0< event.clientY && event.clientX < canvas.width && event.clientY < canvas.height && ! $("#dialogNew").data("dialog").isOpen()) { // annotating
+                
+                    // tranforming the current coodinate
+                    var locationImage;
+                    var tooCloseToFirstVertex = false;
+
+                    locationImage = imageLocation(event.clientX, event.clientY, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane);
+                    if (labelingObject.x.length>0){
+                        
+                        location_min = imageLocation(event.clientX-6, event.clientY-6, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane );
+                        location_max = imageLocation(event.clientX+6, event.clientY+6, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane );
+                        if ( location_min.y > location_max.y ){
+                            var tmp = location_max.y;
+                            location_max.y = location_min.y;
+                            location_min.y = tmp;
+                        }
+                        if ( location_min.x > location_max.x ){
+                            var tmp = location_max.x;
+                            location_max.x = location_min.x;
+                            location_min.x = tmp;
+                        }                        
+                        
+                        if ( location_min.y <= labelingObject.y[0] && labelingObject.y[0] <= location_max.y && location_min.x <= labelingObject.x[0] && labelingObject.x[0] <= location_max.x  ){
+                            tooCloseToFirstVertex = true;
+                        }                            
+                    }                        
+
+                    
+                    
+                    if ((toolPrimitive[selectedTool].size==0 && (labelingObject.x.length < toolPrimitive[selectedTool].minSize || !tooCloseToFirstVertex)) || (toolPrimitive[selectedTool].size>0 && labelingObject.x.length < toolPrimitive[selectedTool].size)){
+                    
+                        // add to array
+                        labelingObject.x.push(locationImage.x);
+                        labelingObject.y.push(locationImage.y);
+                        location3D = imageTo3D(locationImage, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane == "panorama360", scene2render.active_camera_id, scene2render.active_image_id, 0.7);
+                        labelingObject.vertexPositionData.push(location3D.X);
+                        labelingObject.vertexPositionData.push(location3D.Y);
+                        labelingObject.vertexPositionData.push(location3D.Z);
+
+                        
+                        // update buffer
+                        
+                        if (labelingObject.x.length>=2){
+                            if (selectedTool==0){
+                                // bounding box! Automatically add two more points to finish the bounding box
+                                locationImage.x = labelingObject.x[1];
+                                locationImage.y = labelingObject.y[0];
+                                labelingObject.x.push(locationImage.x);
+                                labelingObject.y.push(locationImage.y);
+                                location3D = imageTo3D(locationImage, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane == "panorama360", scene2render.active_camera_id, scene2render.active_image_id,0.7);
+                                labelingObject.vertexPositionData.push(location3D.X);
+                                labelingObject.vertexPositionData.push(location3D.Y);
+                                labelingObject.vertexPositionData.push(location3D.Z);                                
+                                
+                                locationImage.x = labelingObject.x[0];
+                                locationImage.y = labelingObject.y[1];
+                                labelingObject.x.push(locationImage.x);
+                                labelingObject.y.push(locationImage.y);
+                                location3D = imageTo3D(locationImage, scene.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].plane == "panorama360", scene2render.active_camera_id, scene2render.active_image_id,0.7);
+                                labelingObject.vertexPositionData.push(location3D.X);
+                                labelingObject.vertexPositionData.push(location3D.Y);
+                                labelingObject.vertexPositionData.push(location3D.Z);  
+                                
+                                for (var edge_id=0; edge_id< toolPrimitive[selectedTool].edge.length; ++edge_id){
+                                    labelingObject.indexData.push(toolPrimitive[selectedTool].edge[edge_id][0]);
+                                    labelingObject.indexData.push(toolPrimitive[selectedTool].edge[edge_id][1]);
+                                }                                                              
+                            }else if (toolPrimitive[selectedTool].size==0){
+                                labelingObject.indexData.push(labelingObject.x.length-2);
+                                labelingObject.indexData.push(labelingObject.x.length-1);
+                            }else{
+                                for (var edge_id=0; edge_id< toolPrimitive[selectedTool].edge.length; ++edge_id){
+                                    var minIdx = toolPrimitive[selectedTool].edge[edge_id][0];
+                                    var maxIdx = toolPrimitive[selectedTool].edge[edge_id][1];
+                                    if (minIdx > maxIdx){
+                                        var tmpIdx=minIdx;
+                                        minIdx = maxIdx;
+                                        maxIdx = tmpIdx;
+                                    }
+                                    if (labelingObject.x.length-1 == maxIdx){
+                                        labelingObject.indexData.push(minIdx);
+                                        labelingObject.indexData.push(maxIdx);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        labelingObject.Position = gl.createBuffer();
+                        gl.bindBuffer(gl.ARRAY_BUFFER, labelingObject.Position);
+                        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(labelingObject.vertexPositionData), gl.STATIC_DRAW);
+                        labelingObject.Position.itemSize = 3;
+                        labelingObject.Position.numItems = labelingObject.vertexPositionData.length / 3;
+
+                        labelingObject.Index = gl.createBuffer();
+                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, labelingObject.Index);
+                        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(labelingObject.indexData), gl.STATIC_DRAW);
+                        labelingObject.Index.itemSize = 1;
+                        labelingObject.Index.numItems = labelingObject.indexData.length; 
+
+                        render();
+                    }
+                    
+                    
+                    if ((toolPrimitive[selectedTool].size==0 && (labelingObject.x.length >= toolPrimitive[selectedTool].minSize && tooCloseToFirstVertex)) || (toolPrimitive[selectedTool].size>0 && labelingObject.x.length >= toolPrimitive[selectedTool].size)){
+                    
+                    
+                        if (toolPrimitive[selectedTool].size==0){
+                            labelingObject.indexData.push(labelingObject.vertexPositionData.length/3-1);
+                            labelingObject.indexData.push(0); 
+                            labelingObject.Index = gl.createBuffer();
+                            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, labelingObject.Index);
+                            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(labelingObject.indexData), gl.STATIC_DRAW);
+                            labelingObject.Index.itemSize = 1;
+                            labelingObject.Index.numItems = labelingObject.indexData.length;                                      
+                            render();                            
+                        }
+                        
+                        $('#object_name_new').val('');
+                        $('#object_name_new').focus();
+                        $('#dialogNew').dialog('open');
+                        
+                    }
+                    
+                    if (selectedTool<0){
+                        plotIcons();
+                    }else{
+                        drawGuild();
+                    }
+                    
+                    
+                }
+                break;
+        }
+
+        mousePrevXY.X = event.clientX;
+        mousePrevXY.Y = event.clientY;
+    }
+    
+    function updateObjectList(){
+         $('#objectList').empty();
+         for (var i=0; i<scene.objects.length; ++i){
+            var color = labelColors[i % labelColors.length];
+            $('#objectList').append('<li><span id="objectListItem'+i+'" class="objectListItem" style="color: rgba('+Math.round(color[0]*255)+','+Math.round(color[1]*255)+','+Math.round(color[2]*255)+','+(color[3])+');" onclick="chooseObject(' + i + '); " onmouseover="mouseoverObject(' + i + '); " onmouseout="mouseoutObject(' + i + '); " >' + scene.objects[i].name + '</span></li>');
+         }
+    }
+    
+
+    function chooseObject(objectID){
+        selectObjectID = objectID;
+        $('#object_name').val(scene.objects[objectID].name);
+        $('#object_name').focus();
+        $('#dialog').dialog('open');
+    }
+
+    function mouseoverObject(objectID){
+        mouseoverObjectID = objectID;
+        $('#objectListItem'+objectID).css({fontWeight: 'bolder'});
+        render();
+    }
+
+    function mouseoutObject(objectID){
+        mouseoverObjectID = -1;
+        $('#objectListItem'+objectID).css({fontWeight: 'normal'});
+        render();
+    }
+
+    
+    function cancelLabeling(){
+        labelingObject.x = [];
+        labelingObject.y = [];
+        labelingObject.vertexPositionData = [];
+        labelingObject.indexData = [];
+                        
+        selectedTool = -1;
+        plotIcons();    
+        
+        render();
+    }
+    
+    function undoLabeling(){
+        if (labelingObject.x.length==1){
+            cancelLabeling();
+        }else{
+
+
+
+            labelingObject.x.pop();
+            labelingObject.y.pop();
+            labelingObject.vertexPositionData.pop();
+            labelingObject.vertexPositionData.pop();
+            labelingObject.vertexPositionData.pop();
+            
+            if (selectedTool == 0 && labelingObject.x.length>0){
+                labelingObject.x.pop();
+                labelingObject.y.pop();
+                labelingObject.vertexPositionData.pop();
+                labelingObject.vertexPositionData.pop();
+                labelingObject.vertexPositionData.pop();
+                labelingObject.x.pop();
+                labelingObject.y.pop();
+                labelingObject.vertexPositionData.pop();
+                labelingObject.vertexPositionData.pop();
+                labelingObject.vertexPositionData.pop();                            
+            }
+            
+            
+            labelingObject.indexData = [];
+            for (var edge_id=0; edge_id< toolPrimitive[selectedTool].edge.length; ++edge_id){
+                var minIdx = toolPrimitive[selectedTool].edge[edge_id][0];
+                var maxIdx = toolPrimitive[selectedTool].edge[edge_id][1];
+                if (minIdx > maxIdx){
+                    var tmpIdx=minIdx;
+                    minIdx = maxIdx;
+                    maxIdx = tmpIdx;
+                }
+                if (labelingObject.x.length-1 >= maxIdx){
+                    labelingObject.indexData.push(minIdx);
+                    labelingObject.indexData.push(maxIdx);
+                }
+            }
+                                            
+                            
+            labelingObject.Position = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, labelingObject.Position);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(labelingObject.vertexPositionData), gl.STATIC_DRAW);
+            labelingObject.Position.itemSize = 3;
+            labelingObject.Position.numItems = labelingObject.vertexPositionData.length / 3;
+
+            labelingObject.Index = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, labelingObject.Index);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(labelingObject.indexData), gl.STATIC_DRAW);
+            labelingObject.Index.itemSize = 1;
+            labelingObject.Index.numItems = labelingObject.indexData.length;   
+                           
+            render();
+        }
+        if (selectedTool<0){
+            plotIcons();
+        }else{
+            drawGuild();
+        }        
+    }
+
+
+    function loadPointCloud(){
+        if (scene.PointCloud.number > 0){
+            {
+                var oReqVertex = new XMLHttpRequest();
+                oReqVertex.open("GET", getSceneFolder() + scene.PointCloud.vertex, true);
+                oReqVertex.responseType = "arraybuffer";
+                oReqVertex.onload = function (oEvent) {
+                    var arrayBuffer = oReqVertex.response;
+                    if (arrayBuffer) {
+                        pointCloudPositionBuffer = gl.createBuffer();
+                        gl.bindBuffer(gl.ARRAY_BUFFER, pointCloudPositionBuffer);
+                        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arrayBuffer), gl.STATIC_DRAW);
+                        pointCloudPositionBuffer.itemSize = 3;
+                        pointCloudLoaded ++;
+
+                        {
+                            var oReqColor = new XMLHttpRequest();
+                            oReqColor.open("GET", getSceneFolder() + scene.PointCloud.color, true);
+                            oReqColor.responseType = "arraybuffer";
+                            oReqColor.onload = function (oEvent) {
+                                var arrayBuffer = oReqColor.response;
+                                if (arrayBuffer) {
+                                    pointCloudColorBuffer = gl.createBuffer();
+                                    gl.bindBuffer(gl.ARRAY_BUFFER, pointCloudColorBuffer);
+                                    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arrayBuffer), gl.STATIC_DRAW);
+                                    pointCloudColorBuffer.itemSize = 4;
+                                    pointCloudLoaded ++;
+                                    render();
+                                }
+                            };
+                            oReqColor.send(null);
+                        }
+
+                    }
+                };
+                oReqVertex.send(null);
+            }
+            
+            
+        }
+    }
+    
+    function render(){
+        
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.clearColor(1.0, 1.0, 1.0, 1.0); // white background
+
+        // perspective matrix: intrinsic camera parameters (focal length) => viewer scaling
+        mat4.perspective(rad2deg(scene2render.viewer_fovHeight), canvas.width / canvas.height, 0.001, 100, pMatrix);
+
+        // model view matrix: extrinsic camera paramters (translation + rotation) + viewer rotation
+        if (scene2render.active_camera_id == scene2render.cameras.length-1){
+            mat4.multiply(scene2render.viewer_rotation,scene2render.cameras[scene2render.active_camera_id].modelview,mvMatrix);
+        }else{
+            mat4.multiply(scene2render.viewer_rotation,scene.cameras[scene2render.active_camera_id].modelview,mvMatrix);
+        }
+        setMatrixUniforms();          
+                  
+                       
+        // draw the scenes
+
+        // draw 3D points
+        if (scene.PointCloud.number > 0 && pointCloudLoaded==2){
+            gl.bindBuffer(gl.ARRAY_BUFFER, pointCloudPositionBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, pointCloudPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, pointCloudColorBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, pointCloudColorBuffer.itemSize, gl.FLOAT, false, 0, 0);            
+            
+            // how to handle texture when there is no texture
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, pointCloudColorBuffer);
+            gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, dummy_texture);
+            gl.uniform1i(shaderProgram.samplerUniform, 0);
+            
+            gl.uniform1f(shaderProgram.pointSizeUniform, pointSize);
+            gl.drawArrays(gl.POINTS, 0, scene.PointCloud.number);            
+        }
+
+        gl.uniform1f(shaderProgram.pointSizeUniform, 8.0);
+        
+        // draw the camera frustrum (like in SFM)
+        if (show_ims && scene2render.active_camera_id == scene2render.cameras.length-1){
+            gl.lineWidth(1);
+
+            for (var camera_id = 0; camera_id < scene2render.cameras.length-1; ++ camera_id){
+                for (var image_id = 0; image_id < scene2render.cameras[camera_id].images.length; ++ image_id){
+                    gl.bindBuffer(gl.ARRAY_BUFFER, scene2render.cameras[camera_id].images[image_id].Position);
+                    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, scene2render.cameras[camera_id].images[image_id].Position.itemSize, gl.FLOAT, false, 0, 0);
+                    gl.bindBuffer(gl.ARRAY_BUFFER, noColorBuffer);
+                    gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, noColorBuffer.itemSize, gl.FLOAT, false, 0, 0);            
+                    gl.bindBuffer(gl.ARRAY_BUFFER, scene2render.cameras[camera_id].images[image_id].TextureCoord);
+                    gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, scene2render.cameras[camera_id].images[image_id].TextureCoord.itemSize, gl.FLOAT, false, 0, 0);
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, scene2render.cameras[camera_id].images[image_id].texture);
+                    gl.uniform1i(shaderProgram.samplerUniform, 0);
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, scene2render.cameras[camera_id].images[image_id].Index);
+                    gl.drawElements(gl.TRIANGLES, scene2render.cameras[camera_id].images[image_id].Index.numItems, gl.UNSIGNED_SHORT, 0);     
+
+                    if (scene.cameras[camera_id].images[image_id].plane == "planar"){
+                        gl.bindBuffer(gl.ARRAY_BUFFER, cameraColorBuffer);
+                        gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, cameraColorBuffer.itemSize, gl.FLOAT, false, 0, 0);            
+                        // how to handle texture when there is no texture
+                        gl.bindBuffer(gl.ARRAY_BUFFER, noTextureBuffer);
+                        gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, noTextureBuffer.itemSize, gl.FLOAT, false, 0, 0);
+                        gl.activeTexture(gl.TEXTURE0);
+                        gl.bindTexture(gl.TEXTURE_2D, dummy_texture);
+                        gl.uniform1i(shaderProgram.samplerUniform, 0);
+                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, scene2render.cameras[camera_id].images[image_id].indexEdge);
+                        gl.drawElements(gl.LINES, scene2render.cameras[camera_id].images[image_id].indexEdge.numItems, gl.UNSIGNED_SHORT, 0);  
+
+                        //gl.drawArrays(gl.POINTS, 0, scene2render.cameras[camera_id].images[image_id].Position.numItems);
+                    }
+                }
+            }
+        }
+        // draw the 3D objects
+        
+        // draw the annotation specific to the current camera
+        if (scene2render.active_camera_id != scene2render.cameras.length-1){
+            // draw the image for the current camera
+            gl.bindBuffer(gl.ARRAY_BUFFER, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].Position);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].Position.itemSize, gl.FLOAT, false, 0, 0);
+            gl.bindBuffer(gl.ARRAY_BUFFER, noColorBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, noColorBuffer.itemSize, gl.FLOAT, false, 0, 0);            
+            gl.bindBuffer(gl.ARRAY_BUFFER, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].TextureCoord);
+            gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].TextureCoord.itemSize, gl.FLOAT, false, 0, 0);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].texture);
+            gl.uniform1i(shaderProgram.samplerUniform, 0);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].Index);
+            gl.drawElements(gl.TRIANGLES, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].Index.numItems, gl.UNSIGNED_SHORT, 0);
+
+            
+            // draw the 2D annotation for the current camera
+            for (var polygon2D_id = 0; polygon2D_id<scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D.length; ++polygon2D_id){
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].Position);
+                gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].Position.itemSize, gl.FLOAT, false, 0, 0);
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, labelColorBuffer[ scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].object_id % labelColorBuffer.length]);
+                gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, labelColorBuffer[ scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].object_id % labelColorBuffer.length].itemSize, gl.FLOAT, false, 0, 0);            
+                
+                // how to handle texture when there is no texture
+                gl.bindBuffer(gl.ARRAY_BUFFER, noTextureBuffer);
+                gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, noTextureBuffer.itemSize, gl.FLOAT, false, 0, 0);
+                
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, dummy_texture);
+                gl.uniform1i(shaderProgram.samplerUniform, 0);
+                
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].Index);
+                
+                if (mouseoverObjectID == scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].object_id || selectObjectID == scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].object_id)
+                    gl.lineWidth(7);
+                else 
+                    gl.lineWidth(3);
+                gl.drawElements(gl.LINES, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].Index.numItems, gl.UNSIGNED_SHORT, 0);
+
+                if (adjustObjectID == scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].object_id || scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].Position.numItems==1)
+                    gl.drawArrays(gl.POINTS, 0, scene2render.cameras[scene2render.active_camera_id].images[scene2render.active_image_id].polygon2D[polygon2D_id].Position.numItems);
+            }
+            
+            
+            if (labelingObject.x.length>0){
+                gl.bindBuffer(gl.ARRAY_BUFFER, labelingObject.Position);
+                gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, labelingObject.Position.itemSize, gl.FLOAT, false, 0, 0);
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, labelColorBuffer[ 0 ]);
+                gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, labelColorBuffer[0].itemSize, gl.FLOAT, false, 0, 0);            
+                
+                // how to handle texture when there is no texture
+                gl.bindBuffer(gl.ARRAY_BUFFER, noTextureBuffer);
+                gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, noTextureBuffer.itemSize, gl.FLOAT, false, 0, 0);
+                
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, dummy_texture);
+                gl.uniform1i(shaderProgram.samplerUniform, 0);
+                
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, labelingObject.Index);
+                gl.lineWidth(3);
+                gl.drawElements(gl.LINES, labelingObject.Index.numItems, gl.UNSIGNED_SHORT, 0);
+                
+                gl.drawArrays(gl.POINTS, 0, labelingObject.Position.numItems);
+            }
+        }
+    }
+
+
+
+        
+    function loadScene(){
+
+
+        var urlAnnotation = getScenePath();
+        $.ajaxSetup({ cache: false });    
+        $.getJSON(urlAnnotation, function(data) {
+            // initialize WebGL
+            canvas = document.getElementById("canvasPanel");
+            canvas.width = $(window).width()-220;
+            canvas.height = $(window).height();    
+            initGL(canvas);
+            initShaders();
+            gl.enable(gl.DEPTH_TEST);
+            canvas.onmousedown = handleMouseDown;
+            document.onmouseup = handleMouseUp;
+            document.onmousemove = handleMouseMove;          
+        
+        
+            scene = data; // if it doesn't exist, create an empty scene on the fly <= not, it has to be existing. 
+            
+            // construct buffer for each camera
+            scene2render.cameras = new Array();
+            for(var camera_id = 0; camera_id < scene.cameras.length; ++camera_id){
+                var camera = new Object();
+                camera.images = new Array();
+                for(var image_id = 0; image_id < scene.cameras[camera_id].images.length; ++image_id){
+                    camera.images.push(image2render(camera_id,image_id));
+                }
+                scene2render.cameras.push(camera);
+            }
+            // attach one dummy free camera to the end. When it moves, just copy the last camera with the first rgb image.
+            {
+                var camera = new Object();
+                camera.modelview = new Array();
+                camera.images = new Array();
+                scene2render.cameras.push(camera);
+            }
+            
+            
+
+            // construct buffer for the 3D primitive
+            
+            for (var object_id = 0; object_id < scene.objects.length; ++ object_id){
+                //switch (scene.objects[object_id].type ){
+                //    case "polygon2D":
+                        if (scene.objects[object_id].points.length>0){
+                            for (var projection_id =0; projection_id < scene.objects[object_id].points[0].projection.length; ++projection_id ){
+                                var camera_id = scene.objects[object_id].points[0].projection[projection_id].camera;
+                                var image_id  = scene.objects[object_id].points[0].projection[projection_id].image;
+                                
+                                var vertexPositionData = [];
+                                 
+                                for (var point_id = 0; point_id < scene.objects[object_id].points.length; ++ point_id){
+                                    var location3D = imageTo3D(scene.objects[object_id].points[point_id].projection[projection_id].position2D, scene.cameras[camera_id].images[image_id].plane == "panorama360", camera_id, image_id, 0.7);
+                                    vertexPositionData.push(location3D.X);
+                                    vertexPositionData.push(location3D.Y);
+                                    vertexPositionData.push(location3D.Z);
+                                }
+
+                                var indexData = [];
+                                if (toolPrimitive[scene.objects[object_id].type].size==0){
+                                    for (var vertex_id = 0; vertex_id < vertexPositionData.length /3 -1; ++ vertex_id){
+                                        indexData.push(vertex_id);
+                                        indexData.push(vertex_id+1);
+                                    }
+                                    indexData.push(vertexPositionData.length /3-1);
+                                    indexData.push(0);
+                                }else{
+                                    for (var edge_id=0; edge_id< toolPrimitive[scene.objects[object_id].type].edge.length; ++edge_id){
+                                        indexData.push(toolPrimitive[scene.objects[object_id].type].edge[edge_id][0]);
+                                        indexData.push(toolPrimitive[scene.objects[object_id].type].edge[edge_id][1]);
+                                    }                                
+                                }
+
+                                var polygon2DObject = new Object();
+                                
+                                polygon2DObject.Position = gl.createBuffer();
+                                gl.bindBuffer(gl.ARRAY_BUFFER, polygon2DObject.Position);
+                                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositionData), gl.STATIC_DRAW);
+                                polygon2DObject.Position.itemSize = 3;
+                                polygon2DObject.Position.numItems = vertexPositionData.length / 3;
+
+                                polygon2DObject.Index = gl.createBuffer();
+                                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, polygon2DObject.Index);
+                                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
+                                polygon2DObject.Index.itemSize = 1;
+                                polygon2DObject.Index.numItems = indexData.length;       
+                                
+                                polygon2DObject.object_id = object_id;
+                                
+                                scene2render.cameras[camera_id].images[image_id].polygon2D.push(polygon2DObject);
+                                
+                            }
+                        }
+                //        break;
+                //    default:
+                //        break;
+                //}
+            }
+            
+            loadPointCloud();
+            
+            // construct buffer for the 2D primitive for each camera
+            
+            
+            // construct a dummy color buffer
+            
+            scene2render.viewer_rotation = mat4.create();
+            mat4.identity(scene2render.viewer_rotation);
+            
+            // activate the first camera
+            scene2render.active_camera_id = scene2render.cameras.length-1;
+
+            for (var camera_id=scene2render.cameras.length-2; camera_id>=0; --camera_id){
+                activateCamera(camera_id);
+            }
+            //activateCamera(scene2render.cameras.length-2);
+            
+        }).error(function() { alert("JSON format error"); });
+    }
+    
+    function deleteObject(ObjectID){
+        // scene2render.cameras[camera_id].images[image_id].polygon2D.push(polygon2DObject);
+        
+        scene.objects.splice(ObjectID,1);
+        
+        for (var camera_id=0; camera_id<scene2render.cameras.length; ++camera_id ){
+            for (var image_id=0; image_id< scene2render.cameras[camera_id].images.length; ++image_id){
+                for(var object_id=scene2render.cameras[camera_id].images[image_id].polygon2D.length-1; object_id>=0; --object_id){
+                    if (ObjectID == scene2render.cameras[camera_id].images[image_id].polygon2D[object_id].object_id){
+                        scene2render.cameras[camera_id].images[image_id].polygon2D.splice(object_id,1);
+                    }
+                }
+            }
+        }        
+        
+        for (var camera_id=0; camera_id<scene2render.cameras.length; ++camera_id ){
+            for (var image_id=0; image_id< scene2render.cameras[camera_id].images.length; ++image_id){
+                for(var object_id=scene2render.cameras[camera_id].images[image_id].polygon2D.length-1; object_id>=0; --object_id){
+                    if (ObjectID < scene2render.cameras[camera_id].images[image_id].polygon2D[object_id].object_id) {
+                        scene2render.cameras[camera_id].images[image_id].polygon2D[object_id].object_id -- ;                    
+                    }
+                }
+            }
+        }           
+        render();
+        updateObjectList();
+        saveScene();
+    }    
+        
+
+    function activateCamera(camera_id){
+        if (scene2render.active_camera_id == camera_id){
+            if (camera_id < scene2render.cameras.length-1) {
+                mat4.identity(scene2render.viewer_rotation);
+                render();
+            }
+            return;
+        } 
+        scene2render.active_camera_id = camera_id;
+        
+        if (camera_id == scene2render.cameras.length-1) {
+            scene2render.active_image_id = 0;
+            // no need to update field of view and rotation matrix. Just use the current one.
+            render();
+        }else{
+            scene2render.active_image_id = -1;
+            // find the first rgb image
+            for (var image_id = 0; image_id < scene.cameras[camera_id].images.length; ++image_id){
+                if (scene.cameras[camera_id].images[image_id].type == "rgb" ){
+                    scene2render.active_image_id = image_id;
+                    break;
+                }
+            }
+            if (scene2render.active_image_id >=0){
+                // compute the correct filed of view and let rotation matrix to be zero
+                if (scene.cameras[camera_id].images[scene2render.active_image_id].plane == "panorama360"){
+                    if (!scene2render.hasOwnProperty('viewer_fovHeight')){                
+                        scene2render.viewer_fovHeight = 60/180 * Math.PI; //degree // arbitary value for panorama
+                    }
+                }else{
+                    var canvas_aspect_ratio = canvas.width/canvas.height;
+                    var image_aspect_ratio = scene.cameras[camera_id].images[scene2render.active_image_id].resolution.width / scene.cameras[camera_id].images[scene2render.active_image_id].resolution.height;
+                    if (image_aspect_ratio <= canvas_aspect_ratio){
+                        scene2render.viewer_fovHeight = Math.atan( scene.cameras[camera_id].images[scene2render.active_image_id].film.height/ ( 2 * scene.cameras[camera_id].focal_length) )*2;
+                    }else{
+                        viewer_fovWidth = Math.atan( scene.cameras[camera_id].images[scene2render.active_image_id].film.width/ ( 2 * scene.cameras[camera_id].focal_length) )*2;
+                        scene2render.viewer_fovHeight = Math.atan( canvas.height * Math.tan(viewer_fovWidth/2) / canvas.width )*2;
+                    }
+                }
+
+                mat4.identity(scene2render.viewer_rotation);                
+                            
+                // check if the image is loaded
+                if (scene2render.cameras[camera_id].images[scene2render.active_image_id].hasOwnProperty('texture')){
+                    // if is loaded, just draw the image; otherwise, do nothing
+                    if (scene2render.cameras[camera_id].images[scene2render.active_image_id].texture.loaded){
+                        render(); 
+                    }
+                }else{
+                    scene2render.cameras[camera_id].images[scene2render.active_image_id].texture = gl.createTexture();
+                    scene2render.cameras[camera_id].images[scene2render.active_image_id].texture.image = new Image();
+                    scene2render.cameras[camera_id].images[scene2render.active_image_id].texture.image.onload = function () {
+                    
+                        // initialize the texture
+                        gl.bindTexture(gl.TEXTURE_2D, scene2render.cameras[camera_id].images[scene2render.active_image_id].texture);
+                        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+                        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, scene2render.cameras[camera_id].images[scene2render.active_image_id].texture.image);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);        
+                        gl.bindTexture(gl.TEXTURE_2D, null);  
+                        scene2render.cameras[camera_id].images[scene2render.active_image_id].texture.loaded = true;    
+
+                        // hide the loading sign
+                        document.getElementById('loadingPanel').style.display = 'none';
+                    
+                        // render
+                        render(); 
+                    }
+                    scene2render.cameras[camera_id].images[scene2render.active_image_id].texture.image.src = "images/" + scene.cameras[camera_id].images[scene2render.active_image_id].folder + "/" + scene.cameras[camera_id].images[scene2render.active_image_id].file;        
+                }
+            }
+        }
+    }
+
+    $(function() {
+        loadScene();
+    });
+    
+</script>
+</head>
+<body>
+<canvas id="canvasPanel" style="border: none; cursor: default; " oncontextmenu="return false;"></canvas>
+</body>
+</html>
+

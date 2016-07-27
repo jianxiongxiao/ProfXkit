@@ -1,0 +1,50 @@
+<html>
+<body>
+
+<script type="text/javascript">
+
+var data=${data};
+
+var isAllDone = true; // is all the work finished
+
+function updateSubmitButton() {
+    // hitId   assignmentId   workerId
+
+    if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE")
+    {
+        document.getElementById('submitButton').disabled = 'disabled';
+        document.getElementById('submitButton').value = 'You must ACCEPT the HIT before you can submit the results.';
+    }else
+    {
+    	if (isAllDone){
+		    document.getElementById('submitButton').disabled = '';
+		    document.getElementById('submitButton').value = 'Submit';
+        }else{
+            document.getElementById('submitButton').disabled = 'disabled';
+            document.getElementById('submitButton').value = 'Submit';
+        }
+    }
+}
+
+function confirmSubmit()
+{
+	//$('#answer').val('abc');
+	if (true){ // some testing to make sure that you are happy with the turker's work
+		return true;
+	}else{
+		alert("OMG. Your work is too bad to submit");
+		return false;
+	}
+}
+
+updateSubmitButton();
+</script>
+<p><span>${question}</span>?</p>
+
+<img src="${imageURL}" >
+
+<input type="submit" id="submitButton" value="Submit" disabled="disabled" autocomplete="off" onClick="return confirmSubmit()"/>
+<input type="hidden" name="answer" id="answer" value="" autocomplete="off" />
+
+</body>
+</html>

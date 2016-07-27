@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js" ></script>
+<script>
+
+var jobId;
+var longParameters = null;
+var workerId;
+var assignmentId;
+var hitId;
+
+var event_object = null;
+
+function receiveMessage(event)
+{
+  // Do we trust the sender of this message?
+  //if (event.origin !== "http://example.com:8080")
+  //  return;
+
+  // event.source is window.opener
+  // event.data is "hello there!"
+
+  longParameters = event.data;
+  alert('longParameters passed from the host page: ' + longParameters);
+
+  event_object = event;
+}
+
+window.addEventListener("message", receiveMessage, false);
+
+function JobIsDone(){
+  // call postMessage on event.source and provide event.origin as the targetOrigin
+  event_object.source.postMessage("DONE:" + "some data want to send to AMTurk, such as answers", event_object.origin);
+  // close the window
+  open(location, '_self').close();
+}
+
+function gup( name )
+{
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+  var regexS = "[\\?&]"+name+"=([^&#]*)";
+  var regex = new RegExp( regexS );
+  var results = regex.exec( window.location.href );
+  if( results == null )
+    return "NO_GUP_VAL";
+  else
+    return results[1];
+}
+
+function launchIntoFullscreen(element) {
+  if(element.requestFullscreen) {
+    element.requestFullscreen();
+  } else if(element.mozRequestFullScreen) {
+    element.mozRequestFullScreen();
+  } else if(element.webkitRequestFullscreen) {
+    element.webkitRequestFullscreen();
+  } else if(element.msRequestFullscreen) {
+    element.msRequestFullscreen();
+  }
+}
+
+$(document).ready(function(){
+  jobId = gup('jobId');
+  workerId = gup('workerId');
+  assignmentId = gup('assignmentId');
+  hitId = gup('hitId');
+
+});
+
+function StartToWork(){
+  $('#div2fullscreen').show();
+  launchIntoFullscreen(document.getElementById("div2fullscreen"));
+}
+
+</script>
+
+<button onclick="StartToWork();">Start To Work (Click to Full Screen)</button>
+
+<div id="div2fullscreen" style="display: none; width: 100%; height: 100%">
+<p>blah blah blah...</p>
+<button onclick="JobIsDone();">I am done!</button>
+</div>
+
+</body>
+</html>

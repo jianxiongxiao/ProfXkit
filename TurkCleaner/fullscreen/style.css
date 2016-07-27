@@ -1,0 +1,147 @@
+html,body {
+    height:100%;
+}
+
+div{
+	-webkit-user-select: none;
+	-moz-user-select: none; 
+}
+.target{
+	color: #0D0;
+}
+.target img{
+	border: 3px solid #0D0;
+}
+.noise{
+	color: #F00;
+}
+.noise img{
+	border: 3px solid #F00;
+}
+.target p:first-child{
+	display: none;
+}
+.target p:nth-child(2){
+	display: inline;
+}
+.noise p:first-child{
+	display: inline;
+}
+.noise p:nth-child(2){
+	display: none;
+}
+.none p:first-child{
+	display: none;
+}
+.none p:nth-child(2){
+	display: none;
+}
+
+.example {
+
+	display: inline-block;
+	text-align: center;
+	padding: 2px;
+}
+.example img{
+	border-width: 6px;
+	max-width: 120px;
+	height: 75px;
+}	
+.example p{
+	font-weight: normal; font-size: 12pt;
+}
+
+#contentDiv{
+	display: table;
+}
+
+.focus { 
+	display: table-cell;
+	vertical-align: middle; 
+	padding-left: 12px;		
+	padding-right: 12px;		
+	padding-top: 0px;		
+	padding-bottom: 0px;		
+	width: 100%;
+	max-height: 100%;
+}
+
+.focus img{ 
+	max-width: 95%;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 0px;		
+	border-width: 12px; 
+}
+
+.focus1{ 
+	display: table-cell;
+	vertical-align: middle; 
+	padding: 6px;
+	width: 100px; height: 100px;
+}	
+.focus2{ 
+	display: table-cell;
+	vertical-align: middle; 
+	padding: 4px;		
+	width: 50px;
+	height: 50px; 
+}	
+.focus3{ 
+	display: table-cell;
+	vertical-align: middle; 
+	padding: 2px;		
+	width: 25px;
+	height: 25px; 
+}	
+
+
+.focus1 img{ 
+	max-width: 88px;
+	max-height: 88px;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 0px;
+	border-width: 6px; 
+}	
+
+.focus2 img{ 
+	max-width: 42px;
+	max-height: 42px;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 0px;
+	border-width: 4px; 
+}	
+.focus3 img{ 
+	max-width: 21px;
+	max-height: 21px;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 0px;
+	border-width: 2px; 
+}	
+
+.focus p{ 
+	font-weight: bolder; font-size: 28pt; 
+}
+.focus0 p{ 
+	font-weight: bolder; font-size: 28pt; 
+}
+.focus1 p{ 
+	display: none;
+	font-weight: normal; font-size: 16pt; 
+}
+.focus2 p{ 
+	display: none;		
+	font-weight: normal; font-size: 9pt; 
+}
+.focus3 p{ 
+	display: none;	
+	font-weight: normal; font-size: 6pt; 
+}

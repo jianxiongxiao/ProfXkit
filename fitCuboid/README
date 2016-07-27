@@ -1,0 +1,56 @@
+
+
+Demo:
+Just run fitCuboid.m without any argument.
+
+Function:
+
+This program takes input of the image coordinate of the 7 corners of a
+cuboid, and fit a 3D cuboid, and output the new image coordinate of the
+corners.
+
+If changeID is 1-7, it will ignore that corner, and use the rest of the
+corners to estimate the result.
+If changeID is 8, it will use all 7 corners to fit the cuboid.
+
+Author:
+Jianxiong Xiao: http://mit.edu/jxiao/
+
+Citation:
+Please cite the following paper if you use this code in all possible ways.
+
+@inproceedings{CuboidDetector,
+ author = "Jianxiong Xiao and Bryan C. Russell and Antonio Torralba",
+ title = "Localizing 3D Cuboids in Single-view Images",
+ booktitle = "Advances in Neural Information Processing Systems (NIPS)",
+ year = "2012",
+ month = "December",
+ address = "Lake Tahoe, USA"
+}
+
+
+Installation:
+
+You need to have ceres (http://code.google.com/p/ceres-solver/) installed
+in your machine (I only tested with version 1.3.0),
+and compile the mex file by running compile.m
+
+Cooridinate system:
+    y
+    ^
+    |
+    |    2-------------7
+    |    |\             \
+    |    | 1-------------4
+    |    | |             |
+    |    5 |             |
+    |     \|             |
+    |      3-------------6
+    |
+    |
+    +----------------------------->x
+   /
+  /
+ /
+L
+z

@@ -1,0 +1,74 @@
+<html>
+<head>
+<title>DrawMe README</title>
+</head>
+<body>
+
+<h2>DrawMe: A light-weight Javascript library for line drawing on a picture</h2>
+<p>Written by <a href="http://web.mit.edu/jxiao/">Jianxiong Xiao</a></p>
+<p>
+DrawMe is a light-weight Javascript library to enable client-end line drawing on a picture in a web browser. It is targeted to provide a basis for self-define labeling tasks for computer vision researchers. It is different from <a href="http://labelme.csail.mit.edu/">LabelMe</a>, which provides full support but fixed labeling interface. DrawMe is a Javascript library only and the users are required to write their own code to make use of this library for their specific need of labeling. DrawMe does not provide any server or server-end code for labeling, but gives the user greater flexibility for their specific need. It also comes with a simple example with Amazon Mechanical Turk interface that serializes Javascript DOM object into text for HTML form submission. The user can easily build their own labeling interface based on this MTurk example to make use for the Amazon Mechanical Turk for labeling, either using paid workers or the researchers themselves with MTurk sandbox.
+</p>
+<p>
+DrawMe supports all major browsers, and is currently implemented using HTML5 canvas for non-IE browsers (Firefox, Chrome, Safari, etc.), and VML (Google encanvas) for IE browser. It is compatible with the latest browsers, and none-IE browsers and IE9 are all going to support HTML5 Canvas. 
+</p>
+
+<h3>Usages:</h3>
+
+DrawMe provide two ways of usage:
+
+<h4>1. Amazon Mechanical Turk Template:</h4>
+<p>
+DrawMe is particularly convinient for usage on Amazon Mechanical Turk Template without any additional server or database. The template implementation is completely based on Javascript, and everything is completely included in the one single file. This makes the solution becomes very elegant. The result is represented as a Javascript object, and converted to string based on the popular <a href="http://www.json.org/">JSON</a> standard. The researchers can download the pure-text CSV file from Amazon Mechanical Turk, and use the parse_json.m function to convert the pure-text JSON into Matlab structure and cell array for easy usage. One <b><font color="#FF0000">important</font></b> reminder is that Amazon Mechanical Turk CSV result download system has some problem for handling double-quote mark ". Therefore, the double-quote mark " is replaced by single quote mark '. You are required to replace single-quote mark ' back by double-quote mark " before you pass the result into the MATLAB parse_json.m function.
+</p>
+
+<p>There are three folders (turk_template_polygon, turk_template_rectangle, turk_template_polygon_rectangle) provided for handling different shape of labeling: polygon only, rectangle only, both polygon and rectangle (If you click only two points, it is going to be a rectangle. If you click more than two points, it is going to be a polygon.). The Amazon Mechanical Turk Template is stored in DrawMe.html in each folder. You can use a text editor to open it and copy to Amazon Mechanical Turk website. The turk_input_example.csv is an example of the input parameters for the turk tasks. URLimage column is the full URLs for the images that are going to be labeled. MinAcceptNumber column is the minimal acceptable number of polygons/rectangles you want the Turker to label before they can submit the result. For example, usually you may need them to label at least something before submission. Then, you can set MinAcceptNumber to be 1.
+</p> 
+
+
+<h4>2. Get Image Name Based on URL (suitable to researchers to construct their own labeling website similar to <a href="http://labelme.csail.mit.edu/">LabelMe</a>):</h4>
+<p>
+The image is supposed to be placed at Images/folder_name/image_name.jpg . And the folder_name and image_name is passed throught URL. You can try the following link to see how things work.
+</p>
+<p>
+<a href="./parse_url_polygon_rectangle/DrawMe.html?folder=folder1&image=jianxiong.jpg">./parse_url_polygon_rectangle/DrawMe.html?folder=folder1&image=jianxiong.jpg</a>
+</p>
+<p>
+The labeled data is stored at the object array named main_canvas.annotations. You are required to write your own code to store this data into your own server-end or database. If you want to also use JSON to stringify the data into JSON format, you can refer to the examples for Amazon Mechanical Turk templates. 
+</p>
+
+<h3>GUI instruction for labeler:</h3>
+
+<p>
+<b>Label a polygon:</b> :<br>
+1. Start by pressing the left mouse button at some point along the boundary of the object.<br>
+2. Continue clicking along the boundary of the object to create a polygon.<br>
+3. Once you have finished clicking along the boundary of the object, either click on the first point or press the right mouse button to complete the polygon.
+</p>
+
+<p>
+<b>Select polygon:</b> : Once you have finished a polygon, you can click on [Editing] mode and move your mouse to the boundary of the polygon to click and select it. Once the polygon is selected, its control points will be visible and you can drag (hold the left mouse button down) a control point to move it to a new position. Then click anywhere in the image to deselect the polygon. 
+</p>
+
+<p>
+<b>Delete segments:</b> If you want to delete one segment of the polygon before finishing the polygon, click on [Delete Last Control Point]. Once the polygon is closed, you can only delete the whole polygon by first select the polygon and then clicking on [Delete Selected Polygon]
+</p>
+
+<h3>Citation:</h3>
+<p>Please cite the following paper if you use this code:</p>
+<p>J. Xiao, J. Hays, K. Ehinger, A. Oliva, and A. Torralba <br>
+SUN Database: Large-scale Scene Recognition from Abbey to Zoo <br>
+Proceedings of 23rd IEEE Conference on Computer Vision and Pattern Recognition (CVPR2010) </p>
+
+<h3>Contact:</h3>
+<p>Please contact me (<a href="http://web.mit.edu/jxiao/">Jianxiong Xiao</a>) for bug or broken link report. If you are a very good graphic design artist and want to design some skins for this code, please send me an email.</p>
+
+<h3>License:</h3>
+<p>This software is available for only non-commercial use.  See the attached license in LICENSE.txt.</p>
+
+<h3>Acknowledgement:</h3>
+<p><a href="http://labelme.csail.mit.edu/">LabelMe</a> is very helpful to provide examples in some part of the code. And the code makes use of Google Encanvas library and JSON library. We would like to thank Zheng Wu for inspiring discussion at the early stage of forming the idea to have this software.
+</p>
+
+</body>
+</html>

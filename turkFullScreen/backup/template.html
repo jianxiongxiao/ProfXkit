@@ -1,0 +1,163 @@
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js" ></script>
+
+<style>
+.myButton {
+	background-color:#44c767;
+	-moz-border-radius:28px;
+	-webkit-border-radius:28px;
+	border-radius:28px;
+	border:1px solid #18ab29;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family:Arial;
+	font-size:17px;
+	padding:16px 31px;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #2f6627;
+}
+.myButton:hover {
+	background-color:#5cbf2a;
+}
+.myButton:active {
+	position:relative;
+	top:1px;
+}
+</style>
+
+<script type="text/javascript">
+
+var jobId = "short parameters like job ID";
+var longParameters = "long parameters to pass as a string, e.g. json encoding of long image list"; // use AMturk ${VariableName}
+var workerId;
+var assignmentId;
+var hitId;
+var popupWindow = null;
+
+function gup( name )
+{
+	name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+	var regexS = "[\\?&]"+name+"=([^&#]*)";
+	var regex = new RegExp( regexS );
+	var results = regex.exec( window.location.href );
+	if( results == null )
+		return "NO_GUP_VAL";
+	else
+		return results[1];
+}
+
+/*
+function launchIntoFullscreen(element) {
+  if(element.requestFullscreen) {
+    element.requestFullscreen();
+  } else if(element.mozRequestFullScreen) {
+    element.mozRequestFullScreen();
+  } else if(element.webkitRequestFullscreen) {
+    element.webkitRequestFullscreen();
+  } else if(element.msRequestFullscreen) {
+    element.msRequestFullscreen();
+  }
+}
+*/
+
+var myWindow ;
+
+function notifyBack(message){
+	alert('get notify by the popup window: '+message);
+}
+
+function popupWindowNow(){
+	if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE"){
+		alert("Please accept the HIT first before you can start");
+	}else{
+
+
+		myWindow = window.open("", "myWindow", "width=200, height=100");   // Opens a new window
+		
+		
+		{
+			var script = myWindow.document.createElement('script');
+			script.onload = function() {
+				alert("Script loaded and ready");
+			};
+			script.src = "http://ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js";
+			myWindow.document.getElementsByTagName('head')[0].appendChild(script);
+		}
+		
+
+		{
+			var script = myWindow.document.createElement('script');
+			script.onload = function() {
+				alert("Script loaded and ready");
+			};
+			script.src = "http://vision.princeton.edu/pvt/turkFullScreen/code.js";
+			myWindow.document.getElementsByTagName('head')[0].appendChild(script);
+
+		}
+		
+		myWindow.document.write("<div id=\x22div2fullscreen\x22>This is 'myWindow'</div><button onclick=\x22document.getElementById('div2fullscreen').webkitRequestFullscreen();alert('fullscreen');\x22>fullscreen</button><button onclick=\x22alert('simple');\x22>simple</button><button onclick=\x22simple2('simple2');\x22>simple2</button><button onclick=\x22window.opener.notifyBack('notifyBack');\x22>notifyBack</button><button id=\x22StartButton\x22 onclick=\x22StartNow();\x22>Start</button>");   // Text in the new window
+
+
+
+		//launchIntoFullscreen(myWindow.document.getElementById("div2fullscreen"));
+
+		//myWindow.opener.document.write("<p>This is the source window!</p>");  // Text in the window 
+
+		/*
+
+		var URL2open = "https://vision.princeton.edu/pvt/turkFullScreen/target.html?id=" + jobId + "&workerId=" + workerId + "&assignmentId=" + assignmentId + "&hitId=" + hitId;
+
+		popupWindow = window.open(URL2open);
+
+		if ( popupWindow ) {
+			popupWindow.postMessage(longParameters, URL2open);
+		    popupWindow.onload = function() {
+		        popupWindow.postMessage(longParameters, URL2open);
+		    };
+		}else{
+			alert('Pop-up is blocked! You need to enable it first in your browser.');
+		}
+
+		*/
+	}
+}
+
+function receiveMessage(event)
+{
+	//console.log(event.data);
+	//console.log(event.source);
+
+	// Do we trust the sender of this message?
+	if (event.origin !== "https://vision.princeton.edu")
+		return;
+
+	//alert('popupWindow Windows says: '+event.data);
+	// event.source is popupWindow
+	// event.data
+
+	if (event.data.substring(0,4)=="DONE:"){
+		$('#answer2mturk').val(event.data.substring(5));
+		$('#SubmitButton').click();
+	}
+}
+window.addEventListener("message", receiveMessage, false);
+
+$(document).ready(function(){
+	workerId = gup('workerId');
+	assignmentId = gup('assignmentId');
+	hitId = gup('hitId');
+	if (assignmentId != "ASSIGNMENT_ID_NOT_AVAILABLE"){
+		$('#popupWindowButton').html('Open Fullscreen Window to Work Now');
+	}
+});
+
+</script>
+
+<p>Description of this task....</p>
+<div class="myButton" id="popupWindowButton" onclick="popupWindowNow();">Accept the HIT first before you can start</div>
+
+<input type="hidden" name="answer2mturk" id="answer2mturk" value="" autocomplete="off" />
+
+<input type=SUBMIT value="Submit" id="SubmitButton" style="display: none;">
+
+<p style="font-size: 8pt; color: #999;">By making judgments about these images, you are participating in a study being performed by Princeton University. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.</p>

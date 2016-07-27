@@ -1,0 +1,2625 @@
+From 010a10b0151cfa04c7cfae2b1e8a09b653a219b8 Mon Sep 17 00:00:00 2001
+From: Fisher Yu <fy@cs.princeton.edu>
+Date: Fri, 12 Dec 2014 16:40:19 -0500
+Subject: [PATCH] change for googlenet
+
+---
+ examples/imagenet/create_imagenet.sh              |  11 +-
+ examples/imagenet/make_imagenet_mean.sh           |   2 +-
+ examples/imagenet/train_caffenet.sh               |   4 +-
+ examples/imagenet/train_googlenet.sh              |   6 +
+ include/caffe/blob.hpp                            |   9 +
+ include/caffe/common.hpp                          |   6 +-
+ include/caffe/data_layers.hpp                     |  62 ++++-
+ include/caffe/data_transformer.hpp                |  47 +++-
+ include/caffe/loss_layers.hpp                     | 225 +++++++++++++++-
+ include/caffe/net.hpp                             |   3 +
+ src/caffe/blob.cpp                                | 101 ++++++++
+ src/caffe/data_transformer.cpp                    | 186 ++++++++++++++
+ src/caffe/layer_factory.cpp                       |  12 +
+ src/caffe/layers/accuracy_tree_layer.cpp          | 135 ++++++++++
+ src/caffe/layers/compact_data_layer.cpp           | 298 ++++++++++++++++++++++
+ src/caffe/layers/cudnn_pooling_layer.cu           |   4 +-
+ src/caffe/layers/label_transform_layer.cpp        |  68 +++++
+ src/caffe/layers/label_transform_layer.cu         |   0
+ src/caffe/layers/softmax_loss_tree_layer.cpp      | 253 ++++++++++++++++++
+ src/caffe/layers/softmax_loss_tree_layer.cu       |  27 ++
+ src/caffe/layers/transform_accuracy_layer.cpp     |  90 +++++++
+ src/caffe/layers/transform_softmax_loss_layer.cpp | 116 +++++++++
+ src/caffe/net.cpp                                 |  13 +
+ src/caffe/proto/caffe.proto                       |  28 +-
+ src/caffe/solver.cpp                              |  28 +-
+ tools/convert_imageset_compact.cpp                | 133 ++++++++++
+ tools/convert_imageset_compact2.cpp               | 213 ++++++++++++++++
+ 27 files changed, 2060 insertions(+), 20 deletions(-)
+ create mode 100755 examples/imagenet/train_googlenet.sh
+ create mode 100644 src/caffe/layers/accuracy_tree_layer.cpp
+ create mode 100644 src/caffe/layers/compact_data_layer.cpp
+ create mode 100644 src/caffe/layers/label_transform_layer.cpp
+ create mode 100644 src/caffe/layers/label_transform_layer.cu
+ create mode 100644 src/caffe/layers/softmax_loss_tree_layer.cpp
+ create mode 100644 src/caffe/layers/softmax_loss_tree_layer.cu
+ create mode 100644 src/caffe/layers/transform_accuracy_layer.cpp
+ create mode 100644 src/caffe/layers/transform_softmax_loss_layer.cpp
+ create mode 100644 tools/convert_imageset_compact.cpp
+ create mode 100644 tools/convert_imageset_compact2.cpp
+
+diff --git a/examples/imagenet/create_imagenet.sh b/examples/imagenet/create_imagenet.sh
+index e912ac4..fdf3cdd 100755
+--- a/examples/imagenet/create_imagenet.sh
++++ b/examples/imagenet/create_imagenet.sh
+@@ -6,12 +6,13 @@ EXAMPLE=examples/imagenet
+ DATA=data/ilsvrc12
+ TOOLS=build/tools
+ 
+-TRAIN_DATA_ROOT=/path/to/imagenet/train/
+-VAL_DATA_ROOT=/path/to/imagenet/val/
++DEST=/home/common/imagenet
++TRAIN_DATA_ROOT=/home/common/imagenet/train/
++VAL_DATA_ROOT=/home/common/imagenet/val/
+ 
+ # Set RESIZE=true to resize the images to 256x256. Leave as false if images have
+ # already been resized using another tool.
+-RESIZE=false
++RESIZE=true
+ if $RESIZE; then
+   RESIZE_HEIGHT=256
+   RESIZE_WIDTH=256
+@@ -42,7 +43,7 @@ GLOG_logtostderr=1 $TOOLS/convert_imageset \
+     --shuffle \
+     $TRAIN_DATA_ROOT \
+     $DATA/train.txt \
+-    $EXAMPLE/ilsvrc12_train_lmdb
++    $DEST/ilsvrc12_train_lmdb
+ 
+ echo "Creating val lmdb..."
+ 
+@@ -52,6 +53,6 @@ GLOG_logtostderr=1 $TOOLS/convert_imageset \
+     --shuffle \
+     $VAL_DATA_ROOT \
+     $DATA/val.txt \
+-    $EXAMPLE/ilsvrc12_val_lmdb
++    $DEST/ilsvrc12_val_lmdb
+ 
+ echo "Done."
+diff --git a/examples/imagenet/make_imagenet_mean.sh b/examples/imagenet/make_imagenet_mean.sh
+index d3d0c9a..2ecd14e 100755
+--- a/examples/imagenet/make_imagenet_mean.sh
++++ b/examples/imagenet/make_imagenet_mean.sh
+@@ -2,7 +2,7 @@
+ # Compute the mean image from the imagenet training leveldb
+ # N.B. this is available in data/ilsvrc12
+ 
+-./build/tools/compute_image_mean examples/imagenet/ilsvrc12_train_leveldb \
++./build/tools/compute_image_mean /home/common/imagenet/ilsvrc12_train_lmdb \
+   data/ilsvrc12/imagenet_mean.binaryproto
+ 
+ echo "Done."
+diff --git a/examples/imagenet/train_caffenet.sh b/examples/imagenet/train_caffenet.sh
+index 94558ec..80c93fb 100755
+--- a/examples/imagenet/train_caffenet.sh
++++ b/examples/imagenet/train_caffenet.sh
+@@ -1,4 +1,6 @@
+ #!/usr/bin/env sh
+ 
++GOOGLE_LOG_DIR=models/bvlc_reference_caffenet \
+ ./build/tools/caffe train \
+-    --solver=models/bvlc_reference_caffenet/solver.prototxt
++    --solver=models/bvlc_reference_caffenet/solver.prototxt \
++    --gpu=2
+diff --git a/examples/imagenet/train_googlenet.sh b/examples/imagenet/train_googlenet.sh
+new file mode 100755
+index 0000000..e7fcc8f
+--- /dev/null
++++ b/examples/imagenet/train_googlenet.sh
+@@ -0,0 +1,6 @@
++#!/usr/bin/env sh
++
++#GOOGLE_LOG_DIR=models/googlenet \
++./build/tools/caffe train \
++    --solver=models/googlenet/solver.prototxt \
++    --gpu=3
+diff --git a/include/caffe/blob.hpp b/include/caffe/blob.hpp
+index ef10aea..0c0b0c1 100644
+--- a/include/caffe/blob.hpp
++++ b/include/caffe/blob.hpp
+@@ -94,10 +94,14 @@ class Blob {
+   const Dtype* gpu_data() const;
+   const Dtype* cpu_diff() const;
+   const Dtype* gpu_diff() const;
++  const Dtype* cpu_acum_diff() const;
++  const Dtype* gpu_acum_diff() const;
+   Dtype* mutable_cpu_data();
+   Dtype* mutable_gpu_data();
+   Dtype* mutable_cpu_diff();
+   Dtype* mutable_gpu_diff();
++  Dtype* mutable_gpu_acum_diff();
++  Dtype* mutable_cpu_acum_diff();
+   void Update();
+   void FromProto(const BlobProto& proto);
+   void ToProto(BlobProto* proto, bool write_diff = false) const;
+@@ -107,6 +111,10 @@ class Blob {
+   /// @brief Compute the sum of absolute values (L1 norm) of the diff.
+   Dtype asum_diff() const;
+ 
++  // added for allowing bigger batch_size
++  void AccumulateDiff();
++  void UpdateDiff();
++
+   /**
+    * @brief Set the data_ shared_ptr to point to the SyncedMemory holding the
+    *        data_ of Blob other -- useful in Layer&s which simply perform a copy
+@@ -129,6 +137,7 @@ class Blob {
+  protected:
+   shared_ptr<SyncedMemory> data_;
+   shared_ptr<SyncedMemory> diff_;
++  shared_ptr<SyncedMemory> acum_diff_;
+   int num_;
+   int channels_;
+   int height_;
+diff --git a/include/caffe/common.hpp b/include/caffe/common.hpp
+index 9c6eb4d..b61e919 100644
+--- a/include/caffe/common.hpp
++++ b/include/caffe/common.hpp
+@@ -127,6 +127,9 @@ class Caffe {
+   static void SetDevice(const int device_id);
+   // Prints the current GPU status.
+   static void DeviceQuery();
++  // added for allowing bigger batch size
++  inline static void set_accumulate(bool acum) { Get().accumulate_ = acum; }
++  inline static bool accumulate() { return Get().accumulate_; }
+ 
+  protected:
+ #ifndef CPU_ONLY
+@@ -134,7 +137,8 @@ class Caffe {
+   curandGenerator_t curand_generator_;
+ #endif
+   shared_ptr<RNG> random_generator_;
+-
++  // added for allowing bigger batch size
++  bool accumulate_;
+   Brew mode_;
+   Phase phase_;
+   static shared_ptr<Caffe> singleton_;
+diff --git a/include/caffe/data_layers.hpp b/include/caffe/data_layers.hpp
+index 8e2637b..56881c6 100644
+--- a/include/caffe/data_layers.hpp
++++ b/include/caffe/data_layers.hpp
+@@ -4,6 +4,7 @@
+ #include <string>
+ #include <utility>
+ #include <vector>
++#include <map>
+ 
+ #include "boost/scoped_ptr.hpp"
+ #include "hdf5.h"
+@@ -125,6 +126,38 @@ class DataLayer : public BasePrefetchingDataLayer<Dtype> {
+   MDB_val mdb_key_, mdb_value_;
+ };
+ 
++template <typename Dtype>
++class CompactDataLayer : public BasePrefetchingDataLayer<Dtype> {
++ public:
++  explicit CompactDataLayer(const LayerParameter& param)
++      : BasePrefetchingDataLayer<Dtype>(param) {}
++  virtual ~CompactDataLayer();
++  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++
++  virtual inline LayerParameter_LayerType type() const {
++    return LayerParameter_LayerType_DATA;
++  }
++  virtual inline int ExactNumBottomBlobs() const { return 0; }
++  virtual inline int MinTopBlobs() const { return 1; }
++  virtual inline int MaxTopBlobs() const { return 2; }
++
++ protected:
++  virtual void InternalThreadEntry();
++
++  // LEVELDB
++  shared_ptr<leveldb::DB> db_;
++  shared_ptr<leveldb::Iterator> iter_;
++  // LMDB
++  MDB_env* mdb_env_;
++  MDB_dbi mdb_dbi_;
++  MDB_txn* mdb_txn_;
++  MDB_cursor* mdb_cursor_;
++  MDB_val mdb_key_, mdb_value_;
++};
++
+ /**
+  * @brief Provides data to the Net generated by a Filler.
+  *
+@@ -345,6 +378,33 @@ class WindowDataLayer : public BasePrefetchingDataLayer<Dtype> {
+   vector<vector<float> > bg_windows_;
+ };
+ 
+-}  // namespace caffe
+ 
++
++
++template <typename Dtype>
++class LabelTransformLayer : public Layer<Dtype> {
++ public:
++  explicit LabelTransformLayer(const LayerParameter& param)
++      : Layer<Dtype>(param) {}
++  virtual ~LabelTransformLayer() {}
++  virtual inline LayerParameter_LayerType type() const {
++    return LayerParameter_LayerType_LABEL_TRANSFORM;
++  }
++  virtual void LayerSetup(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++
++ protected:
++  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
++                            vector<Blob<Dtype>*>* top);
++  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
++      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
++  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++
++ private:
++  //map<int, int> label_table_;
++  vector<int> new_labels_;
++};
++
++}  // namespace caffe
+ #endif  // CAFFE_DATA_LAYERS_HPP_
+diff --git a/include/caffe/data_transformer.hpp b/include/caffe/data_transformer.hpp
+index 5d5134f..686aa8a 100644
+--- a/include/caffe/data_transformer.hpp
++++ b/include/caffe/data_transformer.hpp
+@@ -4,6 +4,13 @@
+ #include "caffe/common.hpp"
+ #include "caffe/proto/caffe.pb.h"
+ 
++#include <opencv2/core/core.hpp>
++#include <opencv2/highgui/highgui.hpp>
++#include <opencv2/highgui/highgui_c.h>
++#include <opencv2/imgproc/imgproc.hpp>
++
++using namespace cv;
++
+ namespace caffe {
+ 
+ /**
+@@ -20,7 +27,37 @@ class DataTransformer {
+   virtual ~DataTransformer() {}
+ 
+   void InitRand();
++  void FillInOffsets(int *w, int *h, int width, int height, int crop_size) {
++    FillInOffsets(w, h, width, height, crop_size, crop_size);
++    // w[0] = 0; h[0] = 0;
++    // w[1] = 0; h[1] = height - crop_size;
++    // w[2] = width - crop_size; h[2] = 0;
++    // w[3] = width - crop_size; h[3] = height - crop_size;
++    // w[4] = (width - crop_size) / 2; h[4] = (height - crop_size) / 2;
++  }
++
++  void FillInOffsets(int *w, int *h, int width, int height, int crop_w, int crop_h) {
++    if (crop_w < width * 2 / 3 && crop_h < height * 2 / 3) {
++      // we want to be conservative when the crop is small
++      w[0] = 0; h[0] = (height - crop_h) / 2;
++      w[1] = width - crop_w; h[1] = (height - crop_h) / 2;
++      w[2] = (width - crop_w) / 2; h[2] = 0;
++      w[3] = (width - crop_w) / 2; h[3] = height - crop_h;
++      w[4] = (width - crop_w) / 2; h[4] = (height - crop_h) / 2;
++    }
++    else {
++      w[0] = 0; h[0] = 0;
++      w[1] = 0; h[1] = height - crop_h;
++      w[2] = width - crop_w; h[2] = 0;
++      w[3] = width - crop_w; h[3] = height - crop_h;
++      w[4] = (width - crop_w) / 2; h[4] = (height - crop_h) / 2;
++    }
++  }
+ 
++  enum Scaling {SINGLE_SCALE, MULTIPLE_SCALE};
++  // prefine 9 ('scale' & 'aspect radio') combinations
++  static const int widths_[];
++  static const int heights_[];
+   /**
+    * @brief Applies the transformation defined in the data layer's
+    * transform_param block to the data.
+@@ -37,10 +74,14 @@ class DataTransformer {
+    */
+   void Transform(const int batch_item_id, const Datum& datum,
+                  const Dtype* mean, Dtype* transformed_data);
+-
++  void Transform(const int batch_item_id, IplImage *img,
++                 const Dtype* mean, Dtype* transformed_data);
+  protected:
+   virtual unsigned int Rand();
+-
++  void TransformSingle(const int batch_item_id, IplImage *img,
++               const Dtype* mean, Dtype* transformed_data);
++  void TransformMultiple(const int batch_item_id, IplImage *img,
++               const Dtype* mean, Dtype* transformed_data);
+   // Tranformation parameters
+   TransformationParameter param_;
+ 
+@@ -49,6 +90,8 @@ class DataTransformer {
+   Caffe::Phase phase_;
+ };
+ 
++
++
+ }  // namespace caffe
+ 
+ #endif  // CAFFE_DATA_TRANSFORMER_HPP_
+diff --git a/include/caffe/loss_layers.hpp b/include/caffe/loss_layers.hpp
+index 08aa775..532c397 100644
+--- a/include/caffe/loss_layers.hpp
++++ b/include/caffe/loss_layers.hpp
+@@ -4,6 +4,7 @@
+ #include <string>
+ #include <utility>
+ #include <vector>
++#include <map>
+ 
+ #include "caffe/blob.hpp"
+ #include "caffe/common.hpp"
+@@ -85,6 +86,152 @@ class AccuracyLayer : public Layer<Dtype> {
+ };
+ 
+ /**
++ * @brief Computes the classification accuracy for a one-of-many
++ *        classification task.
++ */
++template <typename Dtype>
++class TransformAccuracyLayer : public Layer<Dtype> {
++ public:
++  /**
++   * @param param provides AccuracyParameter accuracy_param,
++   *     with AccuracyLayer options:
++   *   - top_k (\b optional, default 1).
++   *     Sets the maximum rank @f$ k @f$ at which a prediction is considered
++   *     correct.  For example, if @f$ k = 5 @f$, a prediction is counted
++   *     correct if the correct label is among the top 5 predicted labels.
++   */
++  explicit TransformAccuracyLayer(const LayerParameter& param)
++      : Layer<Dtype>(param) {}
++  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++
++  virtual inline LayerParameter_LayerType type() const {
++    return LayerParameter_LayerType_ACCURACY;
++  }
++
++  virtual inline int ExactNumBottomBlobs() const { return 2; }
++  virtual inline int ExactNumTopBlobs() const { return 1; }
++
++ protected:
++  /**
++   * @param bottom input Blob vector (length 2)
++   *   -# @f$ (N \times C \times H \times W) @f$
++   *      the predictions @f$ x @f$, a Blob with values in
++   *      @f$ [-\infty, +\infty] @f$ indicating the predicted score for each of
++   *      the @f$ K = CHW @f$ classes. Each @f$ x_n @f$ is mapped to a predicted
++   *      label @f$ \hat{l}_n @f$ given by its maximal index:
++   *      @f$ \hat{l}_n = \arg\max\limits_k x_{nk} @f$
++   *   -# @f$ (N \times 1 \times 1 \times 1) @f$
++   *      the labels @f$ l @f$, an integer-valued Blob with values
++   *      @f$ l_n \in [0, 1, 2, ..., K - 1] @f$
++   *      indicating the correct class label among the @f$ K @f$ classes
++   * @param top output Blob vector (length 1)
++   *   -# @f$ (1 \times 1 \times 1 \times 1) @f$
++   *      the computed accuracy: @f$
++   *        \frac{1}{N} \sum\limits_{n=1}^N \delta\{ \hat{l}_n = l_n \}
++   *      @f$, where @f$
++   *      \delta\{\mathrm{condition}\} = \left\{
++   *         \begin{array}{lr}
++   *            1 & \mbox{if condition} \\
++   *            0 & \mbox{otherwise}
++   *         \end{array} \right.
++   *      @f$
++   */
++  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++
++
++  /// @brief Not implemented -- AccuracyLayer cannot be used as a loss.
++  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
++      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
++    for (int i = 0; i < propagate_down.size(); ++i) {
++      if (propagate_down[i]) { NOT_IMPLEMENTED; }
++    }
++  }
++
++  int top_k_;
++  vector<int> new_labels_;
++};
++
++/**
++ * @brief Computes the classification accuracy for a decision tree
++ *        classification task.
++ */
++template <typename Dtype>
++class AccuracyTreeLayer : public Layer<Dtype> {
++ public:
++  /**
++   * @param param provides AccuracyTreeParameter accuracy_param,
++   *     with AccuracyTreeLayer options:
++   *   - top_k (\b optional, default 1).
++   *     Sets the maximum rank @f$ k @f$ at which a prediction is considered
++   *     correct.  For example, if @f$ k = 5 @f$, a prediction is counted
++   *     correct if the correct label is among the top 5 predicted labels.
++   */
++  explicit AccuracyTreeLayer(const LayerParameter& param)
++      : Layer<Dtype>(param) {}
++  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++
++  virtual inline LayerParameter_LayerType type() const {
++    return LayerParameter_LayerType_ACCURACY_TREE;
++  }
++
++  // Bottom blobs include all predictions from all branches / sub-branches
++  virtual inline int ExactNumBottomBlobs() const { return -1; }
++  virtual inline int ExactNumTopBlobs() const { return -1; }
++
++ protected:
++  /**
++   * @param bottom input Blob vector (length 2)
++   *   -# @f$ (N \times C \times H \times W) @f$
++   *      the predictions @f$ x @f$, a Blob with values in
++   *      @f$ [-\infty, +\infty] @f$ indicating the predicted score for each of
++   *      the @f$ K = CHW @f$ classes. Each @f$ x_n @f$ is mapped to a predicted
++   *      label @f$ \hat{l}_n @f$ given by its maximal index:
++   *      @f$ \hat{l}_n = \arg\max\limits_k x_{nk} @f$
++   *   -# @f$ (N \times 1 \times 1 \times 1) @f$
++   *      the labels @f$ l @f$, an integer-valued Blob with values
++   *      @f$ l_n \in [0, 1, 2, ..., K - 1] @f$
++   *      indicating the correct class label among the @f$ K @f$ classes
++   * @param top output Blob vector (length 1)
++   *   -# @f$ (1 \times 1 \times 1 \times 1) @f$
++   *      the computed accuracy: @f$
++   *        \frac{1}{N} \sum\limits_{n=1}^N \delta\{ \hat{l}_n = l_n \}
++   *      @f$, where @f$
++   *      \delta\{\mathrm{condition}\} = \left\{
++   *         \begin{array}{lr}
++   *            1 & \mbox{if condition} \\
++   *            0 & \mbox{otherwise}
++   *         \end{array} \right.
++   *      @f$
++   */
++  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++
++
++  /// @brief Not implemented -- AccuracyLayer cannot be used as a loss.
++  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
++      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
++    for (int i = 0; i < propagate_down.size(); ++i) {
++      if (propagate_down[i]) { NOT_IMPLEMENTED; }
++    }
++  }
++
++  int top_k_;
++  vector<vector<int> > new_labels_;
++  vector<int> num_classes_;
++  vector<int> depth_end_position_;
++  int num_nodes_;
++  int tree_depth_;
++  
++};
++
++/**
+  * @brief An interface for Layer%s that take two Blob%s as input -- usually
+  *        (1) predictions and (2) ground-truth labels -- and output a
+  *        singleton Blob representing the loss.
+@@ -174,8 +321,8 @@ class ContrastiveLossLayer : public LossLayer<Dtype> {
+ 
+   /**
+    * @brief Computes the Contrastive error gradient w.r.t. the inputs.
+-   * 
+-   * Computes the gradients with respect to the two input vectors (bottom[0] and 
++   *
++   * Computes the gradients with respect to the two input vectors (bottom[0] and
+    * bottom[1]), but not the similarity label (bottom[2]).
+    *
+    * @param top output Blob vector (length 1), providing the error gradient with
+@@ -194,7 +341,7 @@ class ContrastiveLossLayer : public LossLayer<Dtype> {
+    *      the features @f$a@f$; Backward fills their diff with
+    *      gradients if propagate_down[0]
+    *   -# @f$ (N \times C \times 1 \times 1) @f$
+-   *      the features @f$b@f$; Backward fills their diff with gradients if 
++   *      the features @f$b@f$; Backward fills their diff with gradients if
+    *      propagate_down[1]
+    */
+   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+@@ -763,6 +910,78 @@ class SoftmaxWithLossLayer : public LossLayer<Dtype> {
+   vector<Blob<Dtype>*> softmax_top_vec_;
+ };
+ 
++template <typename Dtype>
++class TransformSoftmaxWithLossLayer: public SoftmaxWithLossLayer<Dtype> {
++ public:
++  explicit TransformSoftmaxWithLossLayer(const LayerParameter& param)
++            : SoftmaxWithLossLayer<Dtype>(param){}
++  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++  virtual inline LayerParameter_LayerType type() const {
++    return LayerParameter_LayerType_TRANSFORM_SOFTMAX_LOSS;
++  }
++protected:
++  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++  // virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
++  //     vector<Blob<Dtype>*>* top);
++  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
++      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
++  // virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
++  //     const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
++
++  vector<int> new_labels_;
++  int sample_cnt_;
++};
++
++template <typename Dtype>
++class SoftmaxWithLossTreeLayer: public LossLayer<Dtype> {
++ public:
++  explicit SoftmaxWithLossTreeLayer(const LayerParameter& param)
++            : LossLayer<Dtype>(param){}
++  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++  virtual inline LayerParameter_LayerType type() const {
++    return LayerParameter_LayerType_SOFTMAX_LOSS_TREE;
++  }
++  virtual inline int ExactNumBottomBlobs() const { return -1; }
++  virtual inline int MinBottomBlobs() const { return 2; }
++  virtual inline int MaxBottomBlobs() const { return -1; }
++  virtual inline int ExactNumTopBlobs() const { return -1; }
++  virtual inline int MinTopBlobs() const { return 1; }
++  virtual inline int MaxTopBlobs() const { return -1; }
++protected:
++  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top);
++  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
++       vector<Blob<Dtype>*>* top);
++  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
++      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
++  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
++       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
++  void ResetChildrenGradient(vector<Blob<Dtype>*>* bottom,
++      int i, int node_id, int depth_level);
++  /// The internal SoftmaxLayer used to map predictions to a distribution.
++  vector<shared_ptr<SoftmaxLayer<Dtype> > > softmax_layer_;
++  /// prob stores the output probability predictions from the SoftmaxLayer.
++  vector<shared_ptr<Blob<Dtype> > > prob_;
++  /// bottom vector holder used in call to the underlying SoftmaxLayer::Forward
++  vector<vector<Blob<Dtype>*> >softmax_bottom_vec_;
++  /// top vector holder used in call to the underlying SoftmaxLayer::Forward
++  vector<vector<Blob<Dtype>*> >softmax_top_vec_;
++
++  vector<Dtype> node_loss_;
++  vector<Dtype> node_weight_;
++  vector<vector<int> > new_labels_;
++  vector<int> num_classes_;
++  vector<int> depth_end_position_;
++  int num_nodes_;
++  int tree_depth_;
++};
++
++
+ }  // namespace caffe
+ 
+ #endif  // CAFFE_LOSS_LAYERS_HPP_
+diff --git a/include/caffe/net.hpp b/include/caffe/net.hpp
+index 1d06dc4..1d70ea6 100644
+--- a/include/caffe/net.hpp
++++ b/include/caffe/net.hpp
+@@ -85,6 +85,9 @@ class Net {
+   /// @brief Updates the network weights based on the diff values computed.
+   void Update();
+ 
++  // added for allowing large batch size
++  void AccumulateDiff();
++  void UpdateDiff();
+   /**
+    * @brief For an already initialized net, implicitly copies (i.e., using no
+    *        additional memory) the pre-trained layers from another Net.
+diff --git a/src/caffe/blob.cpp b/src/caffe/blob.cpp
+index cfffc37..03742d0 100644
+--- a/src/caffe/blob.cpp
++++ b/src/caffe/blob.cpp
+@@ -21,6 +21,8 @@ void Blob<Dtype>::Reshape(const int num, const int channels, const int height,
+     capacity_ = count_;
+     data_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
+     diff_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
++    if (Caffe::accumulate())
++      acum_diff_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
+   }
+ }
+ 
+@@ -62,12 +64,24 @@ const Dtype* Blob<Dtype>::cpu_diff() const {
+ }
+ 
+ template <typename Dtype>
++const Dtype* Blob<Dtype>::cpu_acum_diff() const{
++  CHECK(acum_diff_);
++  return (const Dtype*)acum_diff_->cpu_data();
++}
++
++template <typename Dtype>
+ const Dtype* Blob<Dtype>::gpu_diff() const {
+   CHECK(diff_);
+   return (const Dtype*)diff_->gpu_data();
+ }
+ 
+ template <typename Dtype>
++const Dtype* Blob<Dtype>::gpu_acum_diff() const{
++  CHECK(acum_diff_);
++  return (const Dtype*)acum_diff_->gpu_data();
++}
++
++template <typename Dtype>
+ Dtype* Blob<Dtype>::mutable_cpu_data() {
+   CHECK(data_);
+   return static_cast<Dtype*>(data_->mutable_cpu_data());
+@@ -86,12 +100,24 @@ Dtype* Blob<Dtype>::mutable_cpu_diff() {
+ }
+ 
+ template <typename Dtype>
++Dtype* Blob<Dtype>::mutable_cpu_acum_diff(){
++  CHECK(acum_diff_);
++  return static_cast<Dtype*>(acum_diff_->mutable_cpu_data());
++}
++
++template <typename Dtype>
+ Dtype* Blob<Dtype>::mutable_gpu_diff() {
+   CHECK(diff_);
+   return static_cast<Dtype*>(diff_->mutable_gpu_data());
+ }
+ 
+ template <typename Dtype>
++Dtype* Blob<Dtype>::mutable_gpu_acum_diff(){
++  CHECK(acum_diff_);
++  return static_cast<Dtype*>(acum_diff_->mutable_gpu_data());
++}
++
++template <typename Dtype>
+ void Blob<Dtype>::ShareData(const Blob& other) {
+   CHECK_EQ(count_, other.count());
+   data_ = other.data();
+@@ -135,6 +161,81 @@ void Blob<Dtype>::Update() {
+   }
+ }
+ 
++// added for allowing bigger batch_size
++template <> void Blob<unsigned int>::AccumulateDiff(){
++  NOT_IMPLEMENTED;
++  return;
++}
++
++template <> void Blob<int>::AccumulateDiff(){
++  NOT_IMPLEMENTED;
++  return;
++}
++
++template <typename Dtype>
++void Blob<Dtype>::AccumulateDiff(){
++  switch (data_->head()){
++  case SyncedMemory::HEAD_AT_CPU:
++    // perform computation on CPU
++    caffe_axpy<Dtype>(count_, Dtype(1.0),
++      static_cast<const Dtype*>(diff_->cpu_data()),
++      static_cast<Dtype*>(acum_diff_->mutable_cpu_data()));
++    break;
++  case SyncedMemory::HEAD_AT_GPU:
++  case SyncedMemory::SYNCED:
++#ifndef CPU_ONLY
++    // perform computation on GPU
++    caffe_gpu_axpy<Dtype>(count_, Dtype(1.0),
++      static_cast<const Dtype*>(diff_->gpu_data()),
++      static_cast<Dtype*>(acum_diff_->mutable_gpu_data()));
++#else
++    NO_GPU;
++#endif
++    break;
++  default:
++    LOG(FATAL) << "Syncedmem not initialized.";
++  }
++}
++
++template <> void Blob<unsigned int>::UpdateDiff(){
++  NOT_IMPLEMENTED;
++  return;
++}
++
++template <> void Blob<int>::UpdateDiff(){
++  NOT_IMPLEMENTED;
++  return;
++}
++
++template <typename Dtype>
++void Blob<Dtype>::UpdateDiff(){
++  switch (data_->head()){
++  case SyncedMemory::HEAD_AT_CPU:
++    // perform computation on CPU
++    caffe_axpy<Dtype>(count_, Dtype(1.0),
++      static_cast<const Dtype*>(acum_diff_->cpu_data()),
++      static_cast<Dtype*>(diff_->mutable_cpu_data()));
++    caffe_memset(sizeof(Dtype)*count_, 0,
++      acum_diff_->mutable_cpu_data());
++    break;
++  case SyncedMemory::HEAD_AT_GPU:
++  case SyncedMemory::SYNCED:
++#ifndef CPU_ONLY
++    // perform computation on GPU
++    caffe_gpu_axpy<Dtype>(count_, Dtype(1.0),
++      static_cast<const Dtype*>(acum_diff_->gpu_data()),
++      static_cast<Dtype*>(diff_->mutable_gpu_data()));
++    caffe_gpu_memset(sizeof(Dtype)*count_, 0,
++      acum_diff_->mutable_gpu_data());
++#else
++    NO_GPU;
++#endif
++    break;
++  default:
++    LOG(FATAL) << "Syncedmem not initialized.";
++  }
++}
++
+ template <> unsigned int Blob<unsigned int>::asum_data() const {
+   NOT_IMPLEMENTED;
+   return 0;
+diff --git a/src/caffe/data_transformer.cpp b/src/caffe/data_transformer.cpp
+index 7150fd9..bccadd4 100644
+--- a/src/caffe/data_transformer.cpp
++++ b/src/caffe/data_transformer.cpp
+@@ -1,12 +1,198 @@
+ #include <string>
++#include <opencv2/core/core_c.h>
++#include <opencv2/core/core.hpp>
++#include <opencv2/highgui/highgui.hpp>
++#include <opencv2/highgui/highgui_c.h>
++#include <opencv2/imgproc/imgproc.hpp>
++#include <opencv2/imgproc/imgproc_c.h>
+ 
+ #include "caffe/data_transformer.hpp"
+ #include "caffe/util/math_functions.hpp"
+ #include "caffe/util/rng.hpp"
+ 
++using namespace cv;
+ namespace caffe {
+ 
+ template<typename Dtype>
++const int DataTransformer<Dtype>::widths_[] = {256, 256, 192, 224, 224, 168, 168, 168, 126};
++
++template<typename Dtype>
++const int DataTransformer<Dtype>::heights_[]  = {256, 192, 256, 224, 168, 224, 168, 126, 168};
++
++template<typename Dtype>
++void DataTransformer<Dtype>::TransformSingle(const int batch_item_id,
++                                       IplImage *img,
++                                       const Dtype* mean,
++                                       Dtype* transformed_data) {
++  const int crop_size = param_.crop_size();
++  const bool mirror = param_.mirror();
++  const Dtype scale = param_.scale();
++
++  int channels = img->nChannels;
++  int width = img->width;
++  int height = img->height;
++  unsigned char* data = (unsigned char *)img->imageData;
++  int step = img->widthStep / sizeof(char);
++  // crop 4 courners + center
++  int w[5], h[5];
++  FillInOffsets(w, h, width, height, crop_size);
++  int h_off, w_off;
++  // We only do random crop when we do training.
++  if (phase_ == Caffe::TRAIN) {
++    int r = Rand() % 5;
++    h_off = h[r];
++    w_off = w[r];
++  } else {
++    h_off = h[4];
++    w_off = w[4];
++  }
++
++
++  ////// -------------------!! for debug !! -------------------
++  // IplImage *dest = cvCreateImage(cvSize(crop_size * 2, crop_size * 2),
++                                    // img->depth, img->nChannels);
++  // cvResize(img, dest);
++  // cvNamedWindow("Sample1");
++  // cvNamedWindow("Sample2");
++  // if (phase_ == Caffe::TRAIN)
++  //   cvShowImage("Sample", dest);
++  // else
++  //   cvShowImage("Sample", img);
++  // cvWaitKey(0);
++  // cvReleaseImage(&img);
++  // cvReleaseImage(&dest);
++  // if (phase_ == Caffe::TRAIN) {
++  //   cvSetImageROI(img, cvRect(w_off, h_off, crop_size, crop_size));
++  //   // cvCopy(img, dest, NULL);
++  //   cvResize(img, dest);
++  //   cvResetImageROI(img);
++  //   cvShowImage("Sample1", img);
++  //   cvShowImage("Sample2", dest);
++  //   cvWaitKey(0);
++  // }
++  // cvReleaseImage(&dest);
++  ////// -------------------------------------------------------
++  if (mirror && Rand() % 2) {
++    // Copy mirrored version
++    for (int c = 0; c < channels; c++) {
++      for (int h = 0; h < crop_size; h++) {
++        for (int w = 0; w < crop_size; w++) {
++          int top_index = ((batch_item_id * channels + c) * crop_size + h)
++                          * crop_size + (crop_size - 1 - w);
++          int data_index = (h + h_off) * step + (w + w_off) * channels + c;
++          int mean_index = (c * crop_size + h) * crop_size + w;
++          Dtype datum_element = static_cast<Dtype>(data[data_index]);
++          transformed_data[top_index] = (datum_element - mean[mean_index]) * scale;
++        }
++      }
++    }
++  } else {
++    // Normal copy
++    for (int c = 0; c < channels; c++) {
++      for (int h = 0; h < crop_size; h++) {
++        for (int w = 0; w < crop_size; w++) {
++          int top_index = ((batch_item_id * channels + c) * crop_size + h)
++                          * crop_size + w;
++          int data_index = (h + h_off) * step + (w + w_off) * channels + c;
++          int mean_index = (c * crop_size + h) * crop_size + w;
++          Dtype datum_element = static_cast<Dtype>(data[data_index]);
++          transformed_data[top_index] = (datum_element - mean[mean_index]) * scale;
++        }
++      }
++    }
++  }
++
++}
++
++template<typename Dtype>
++void DataTransformer<Dtype>::TransformMultiple(const int batch_item_id,
++                                       IplImage *img,
++                                       const Dtype* mean,
++                                       Dtype* transformed_data) {
++  const int crop_size = param_.crop_size();
++  const bool mirror = param_.mirror();
++  const Dtype scale = param_.scale();
++
++  int channels = img->nChannels;
++  int width = img->width;
++  int height = img->height;
++
++
++  int sc = 3;  //(224, 224)
++  int cr = 4;  // center crop
++  // We only do random cropping & scaling when we do training.
++  if (phase_ == Caffe::TRAIN) {
++    sc = Rand() % 9;
++    cr = Rand() % 5;
++  }
++  int roi_w = widths_[sc];
++  int roi_h = heights_[sc];
++  // crop 4 courners + center
++  int w[5], h[5];
++  FillInOffsets(w, h, width, height, roi_w, roi_h);
++  int h_off = h[cr], w_off = w[cr];
++  IplImage *dest = cvCreateImage(cvSize(crop_size, crop_size),
++                                    img->depth, img->nChannels);
++
++  cvSetImageROI(img, cvRect(w_off, h_off, roi_w, roi_h));
++  cvResize(img, dest);
++  cvResetImageROI(img);
++
++  //////--------------------!! for debug only !!-------------------
++  // if (phase_ == Caffe::TRAIN) {
++  //   cvFlip(dest, NULL, 1);
++  //   cvShowImage("Sample1", img);
++  //   cvShowImage("Sample2", dest);
++  //   LOG(INFO) << w_off << ", " << h_off << "   " << roi_w << ", " << roi_h;
++  //   cvWaitKey(0);
++  // }
++
++  unsigned char* data = (unsigned char *)dest->imageData;
++  int step = dest->widthStep / sizeof(char);
++  if (mirror && Rand() % 2) {
++    // Copy mirrored version
++    for (int c = 0; c < channels; c++) {
++      for (int h = 0; h < crop_size; h++) {
++        for (int w = 0; w < crop_size; w++) {
++          int top_index = ((batch_item_id * channels + c) * crop_size + h)
++                          * crop_size + (crop_size - 1 - w);
++          int data_index = h * step + w * channels + c;
++          int mean_index = (c * crop_size + h) * crop_size + w;
++          Dtype datum_element = static_cast<Dtype>(data[data_index]);
++          transformed_data[top_index] = (datum_element - mean[mean_index]) * scale;
++        }
++      }
++    }
++  } else {
++    // Normal copy
++    for (int c = 0; c < channels; c++) {
++      for (int h = 0; h < crop_size; h++) {
++        for (int w = 0; w < crop_size; w++) {
++          int top_index = ((batch_item_id * channels + c) * crop_size + h)
++                          * crop_size + w;
++          int data_index = h * step + w * channels + c;
++          int mean_index = (c * crop_size + h) * crop_size + w;
++          Dtype datum_element = static_cast<Dtype>(data[data_index]);
++          transformed_data[top_index] = (datum_element - mean[mean_index]) * scale;
++        }
++      }
++    }
++  }
++  cvReleaseImage(&dest);
++}
++
++template<typename Dtype>
++void DataTransformer<Dtype>::Transform(const int batch_item_id,
++                                       IplImage *img,
++                                       const Dtype* mean,
++                                       Dtype* transformed_data) {
++  if (!param_.multiscale())
++    TransformSingle(batch_item_id, img, mean, transformed_data);
++  else
++    TransformMultiple(batch_item_id, img, mean, transformed_data);
++}
++
++template<typename Dtype>
+ void DataTransformer<Dtype>::Transform(const int batch_item_id,
+                                        const Datum& datum,
+                                        const Dtype* mean,
+diff --git a/src/caffe/layer_factory.cpp b/src/caffe/layer_factory.cpp
+index b78167f..f9bd722 100644
+--- a/src/caffe/layer_factory.cpp
++++ b/src/caffe/layer_factory.cpp
+@@ -181,12 +181,16 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
+   switch (type) {
+   case LayerParameter_LayerType_ACCURACY:
+     return new AccuracyLayer<Dtype>(param);
++  case LayerParameter_LayerType_TRANSFORM_ACCURACY:
++    return new TransformAccuracyLayer<Dtype>(param);
+   case LayerParameter_LayerType_ABSVAL:
+     return new AbsValLayer<Dtype>(param);
+   case LayerParameter_LayerType_ARGMAX:
+     return new ArgMaxLayer<Dtype>(param);
+   case LayerParameter_LayerType_BNLL:
+     return new BNLLLayer<Dtype>(param);
++  case LayerParameter_LayerType_COMPACT_DATA:
++    return new CompactDataLayer<Dtype>(param);
+   case LayerParameter_LayerType_CONCAT:
+     return new ConcatLayer<Dtype>(param);
+   case LayerParameter_LayerType_CONTRASTIVE_LOSS:
+@@ -219,6 +223,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
+     return new InfogainLossLayer<Dtype>(param);
+   case LayerParameter_LayerType_INNER_PRODUCT:
+     return new InnerProductLayer<Dtype>(param);
++  case LayerParameter_LayerType_LABEL_TRANSFORM:
++    return new LabelTransformLayer<Dtype>(param);
+   case LayerParameter_LayerType_LRN:
+     return new LRNLayer<Dtype>(param);
+   case LayerParameter_LayerType_MEMORY_DATA:
+@@ -249,6 +255,12 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
+     return new SplitLayer<Dtype>(param);
+   case LayerParameter_LayerType_TANH:
+     return GetTanHLayer<Dtype>(name, param);
++  case LayerParameter_LayerType_TRANSFORM_SOFTMAX_LOSS:
++    return new TransformSoftmaxWithLossLayer<Dtype>(param);
++  case LayerParameter_LayerType_SOFTMAX_LOSS_TREE:
++    return new SoftmaxWithLossTreeLayer<Dtype>(param);
++  case LayerParameter_LayerType_ACCURACY_TREE:
++    return new AccuracyTreeLayer<Dtype>(param);
+   case LayerParameter_LayerType_WINDOW_DATA:
+     return new WindowDataLayer<Dtype>(param);
+   case LayerParameter_LayerType_NONE:
+diff --git a/src/caffe/layers/accuracy_tree_layer.cpp b/src/caffe/layers/accuracy_tree_layer.cpp
+new file mode 100644
+index 0000000..0c4f3e8
+--- /dev/null
++++ b/src/caffe/layers/accuracy_tree_layer.cpp
+@@ -0,0 +1,135 @@
++#include <algorithm>
++#include <functional>
++#include <utility>
++#include <vector>
++
++#include "caffe/layer.hpp"
++#include "caffe/util/io.hpp"
++#include "caffe/util/math_functions.hpp"
++#include "caffe/vision_layers.hpp"
++
++namespace caffe {
++
++template <typename Dtype>
++void AccuracyTreeLayer<Dtype>::LayerSetUp(
++  const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++  TreeParameter tree_param = this->layer_param_.tree_param();
++  AccuracyParameter accuracy_param = this->layer_param_.accuracy_param();
++  top_k_ = accuracy_param.top_k();
++  tree_depth_ = tree_param.tree_depth();
++  depth_end_position_.push_back(0);
++
++  CHECK(tree_param.label_transform_file_size() > 0) << this->layer_param_.name() << " No label transform file provided";
++  // each node is a classifier
++  num_nodes_ = tree_param.label_transform_file_size();
++  int bottom_size = this->layer_param_.bottom_size();
++  int top_size = this->layer_param_.top_size();
++  // the last bottom is for the label
++  CHECK_EQ(bottom_size, num_nodes_+1) << "labels should match with bottom blobs input";
++  CHECK_EQ(top_size, tree_depth_) << "top num should match with tree depth";
++  new_labels_.resize(num_nodes_);
++  int to_read = 1;  // number to read in the current depth 
++  int depth_level = 0;
++  for (int t = 0; t < num_nodes_; ++t) {
++    std::ifstream trans_file(tree_param.label_transform_file(t).c_str());
++    CHECK(trans_file.is_open());
++    int label_to;
++    set<int> to;
++    new_labels_[t].clear();
++    while (trans_file >> label_to) {
++      new_labels_[t].push_back(label_to);
++      if (label_to >= 0) {
++        to.insert(label_to);
++      }
++    }
++    trans_file.close();
++    num_classes_.push_back(to.size());
++    
++    LOG(INFO) << this->layer_param_.name() << ": Transform to "
++        << to.size() << " unique labels";
++    CHECK_EQ(to.size(), bottom[t]->count()/bottom[t]->num()) << this->layer_param_.name()
++        << ": mismatched label sets and softmax dim";
++
++    to_read -= 1;
++    if (to_read == 0) {
++      depth_end_position_.push_back(t+1);
++      to_read = 0;
++      depth_level ++;
++      for (int tr = depth_end_position_[depth_level-1]; tr < depth_end_position_[depth_level]; ++tr)
++        to_read += num_classes_[tr];
++    }
++  }
++}
++
++template <typename Dtype>
++void AccuracyTreeLayer<Dtype>::Reshape(
++  const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++  // CHECK_EQ(bottom[0]->num(), bottom[1]->num())
++  //    << "The data and label should have the same number.";
++  // CHECK_LE(top_k_, bottom[num_nodes_]->count() / bottom[num_nodes_]->num())
++  //    << "top_k must be less than or equal to the number of classes.";
++  CHECK_EQ(bottom[num_nodes_]->channels(), 1);
++  CHECK_EQ(bottom[num_nodes_]->height(), 1);
++  CHECK_EQ(bottom[num_nodes_]->width(), 1);
++
++  for (int d = 0; d < tree_depth_; ++d) 
++    (*top)[d]->Reshape(1, 1, 1, 1);
++}
++
++template <typename Dtype>
++void AccuracyTreeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
++    vector<Blob<Dtype>*>* top) {
++  vector<Dtype> accuracy(tree_depth_, 0);
++  const Dtype* bottom_label = bottom[num_nodes_]->cpu_data();
++  int num = bottom[0]->num();
++  for (int i = 0; i < num; ++i) {
++    int node_idx = 0; // classifier index
++    int depth_level = 0; // depth level of the current classifier 
++
++    // first get the accuracy of the top depth-1 layers
++    while (depth_level < tree_depth_) {
++      int raw_label = static_cast<int>(bottom_label[i]);
++      int this_label = new_labels_[node_idx][raw_label]; 
++      int dim = num_classes_[node_idx];
++      const Dtype* bottom_data = bottom[node_idx]->cpu_data();
++
++      std::vector<std::pair<Dtype, int> > bottom_data_vector;
++      for (int j = 0; j < dim; ++j) {
++        bottom_data_vector.push_back(
++            std::make_pair(bottom_data[i * dim + j], j));
++      }
++      int this_top_k = 1;
++      if (depth_level == tree_depth_ - 1)
++         this_top_k = top_k_;
++      std::partial_sort(
++          bottom_data_vector.begin(), bottom_data_vector.begin() + this_top_k,
++          bottom_data_vector.end(), std::greater<std::pair<Dtype, int> >());
++      int k = 0;
++      for ( k = 0; k < this_top_k; k++) {
++        if (bottom_data_vector[k].second == this_label) {
++          accuracy[depth_level] += 1;
++          break;
++        } 
++      } 
++      // if lower layers are wrong, break directly
++      if (bottom_data_vector[k].second != this_label)
++        break;
++
++      // update the node_idx to the next level 
++      int skip_nodes = 0;
++      for (int node = depth_end_position_[depth_level]; node < node_idx; node++)
++          skip_nodes += num_classes_[node]; 
++      node_idx = depth_end_position_[depth_level+1] + skip_nodes + this_label;
++
++      depth_level++;
++    }
++  }
++
++  for (int d = 0; d < tree_depth_; ++d) 
++    (*top)[d]->mutable_cpu_data()[0] = accuracy[d] / num;
++  // Accuracy layer should not be used as a loss function.
++}
++
++INSTANTIATE_CLASS(AccuracyTreeLayer);
++
++}  // namespace caffe
+diff --git a/src/caffe/layers/compact_data_layer.cpp b/src/caffe/layers/compact_data_layer.cpp
+new file mode 100644
+index 0000000..704ec2c
+--- /dev/null
++++ b/src/caffe/layers/compact_data_layer.cpp
+@@ -0,0 +1,298 @@
++#include <leveldb/db.h>
++#include <stdint.h>
++
++#include <string>
++#include <vector>
++
++#include <opencv2/core/core_c.h>
++#include <opencv2/core/core.hpp>
++#include <opencv2/highgui/highgui.hpp>
++#include <opencv2/highgui/highgui_c.h>
++#include <opencv2/imgproc/imgproc.hpp>
++#include <opencv2/imgproc/imgproc_c.h>
++
++#include "caffe/common.hpp"
++#include "caffe/data_layers.hpp"
++#include "caffe/layer.hpp"
++#include "caffe/proto/caffe.pb.h"
++#include "caffe/util/io.hpp"
++#include "caffe/util/math_functions.hpp"
++#include "caffe/util/rng.hpp"
++
++using namespace cv;
++
++namespace caffe {
++
++template <typename Dtype>
++CompactDataLayer<Dtype>::~CompactDataLayer<Dtype>() {
++  this->JoinPrefetchThread();
++  // clean up the database resources
++  switch (this->layer_param_.data_param().backend()) {
++  case DataParameter_DB_LEVELDB:
++    break;  // do nothing
++  case DataParameter_DB_LMDB:
++    mdb_cursor_close(mdb_cursor_);
++    mdb_close(mdb_env_, mdb_dbi_);
++    mdb_txn_abort(mdb_txn_);
++    mdb_env_close(mdb_env_);
++    break;
++  default:
++    LOG(FATAL) << "Unknown database backend";
++  }
++}
++
++template <typename Dtype>
++void CompactDataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top) {
++  if (top->size() == 1) {
++    this->output_labels_ = false;
++  } else {
++    this->output_labels_ = true;
++  }
++  DataLayerSetUp(bottom, top);
++  // The subclasses should setup the datum channels, height and width
++  CHECK_GT(this->datum_channels_, 0);
++  CHECK_GT(this->datum_height_, 0);
++  CHECK_GT(this->datum_width_, 0);
++  CHECK(this->transform_param_.crop_size() > 0);
++  CHECK_GE(this->datum_height_, this->transform_param_.crop_size());
++  CHECK_GE(this->datum_width_, this->transform_param_.crop_size());
++  int crop_size = this->transform_param_.crop_size();
++
++  CHECK(this->transform_param_.has_mean_file());
++  this->data_mean_.Reshape(1, this->datum_channels_, crop_size, crop_size);
++  const string& mean_file = this->transform_param_.mean_file();
++  LOG(INFO) << "Loading mean file from" << mean_file;
++  BlobProto blob_proto;
++  ReadProtoFromBinaryFileOrDie(mean_file.c_str(), &blob_proto);
++  this->data_mean_.FromProto(blob_proto);
++  Blob<Dtype> tmp;
++  tmp.FromProto(blob_proto);
++  const Dtype* src_data = tmp.cpu_data();
++  Dtype* dst_data = this->data_mean_.mutable_cpu_data();
++  CHECK_EQ(tmp.num(), 1);
++  CHECK_EQ(tmp.channels(), this->datum_channels_);
++  CHECK_GE(tmp.height(), crop_size);
++  CHECK_GE(tmp.width(), crop_size);
++  int w_off = (tmp.width() - crop_size) / 2;
++  int h_off = (tmp.height() - crop_size) / 2;
++  for (int c = 0; c < this->datum_channels_; c++) {
++    for (int h = 0; h < crop_size; h++) {
++      for (int w = 0; w < crop_size; w++) {
++        int src_idx = (c * tmp.height() + h + h_off) * tmp.width() + w + w_off;
++        int dst_idx = (c * crop_size + h) * crop_size + w;
++        dst_data[dst_idx] = src_data[src_idx];
++      }
++    }
++  }
++
++  this->mean_ = this->data_mean_.cpu_data();
++  this->data_transformer_.InitRand();
++
++  this->prefetch_data_.mutable_cpu_data();
++  if (this->output_labels_) {
++    this->prefetch_label_.mutable_cpu_data();
++  }
++  DLOG(INFO) << "Initializing prefetch";
++  this->CreatePrefetchThread();
++  DLOG(INFO) << "Prefetch initialized.";
++}
++
++template <typename Dtype>
++void CompactDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top) {
++  // Initialize DB
++  switch (this->layer_param_.data_param().backend()) {
++  case DataParameter_DB_LEVELDB:
++    {
++    leveldb::DB* db_temp;
++    leveldb::Options options = GetLevelDBOptions();
++    options.create_if_missing = false;
++    LOG(INFO) << "Opening leveldb " << this->layer_param_.data_param().source();
++    leveldb::Status status = leveldb::DB::Open(
++        options, this->layer_param_.data_param().source(), &db_temp);
++    CHECK(status.ok()) << "Failed to open leveldb "
++                       << this->layer_param_.data_param().source() << std::endl
++                       << status.ToString();
++    db_.reset(db_temp);
++    iter_.reset(db_->NewIterator(leveldb::ReadOptions()));
++    iter_->SeekToFirst();
++    }
++    break;
++  case DataParameter_DB_LMDB:
++    //LOG(FATAL) << "do not support LMDB at present";
++    CHECK_EQ(mdb_env_create(&mdb_env_), MDB_SUCCESS) << "mdb_env_create failed";
++    CHECK_EQ(mdb_env_set_mapsize(mdb_env_, 1099511627776), MDB_SUCCESS);  // 1TB
++    CHECK_EQ(mdb_env_open(mdb_env_,
++             this->layer_param_.data_param().source().c_str(),
++             MDB_RDONLY|MDB_NOTLS, 0664), MDB_SUCCESS) << "mdb_env_open failed";
++    CHECK_EQ(mdb_txn_begin(mdb_env_, NULL, MDB_RDONLY, &mdb_txn_), MDB_SUCCESS)
++        << "mdb_txn_begin failed";
++    CHECK_EQ(mdb_open(mdb_txn_, NULL, 0, &mdb_dbi_), MDB_SUCCESS)
++        << "mdb_open failed";
++    CHECK_EQ(mdb_cursor_open(mdb_txn_, mdb_dbi_, &mdb_cursor_), MDB_SUCCESS)
++        << "mdb_cursor_open failed";
++    LOG(INFO) << "Opening lmdb " << this->layer_param_.data_param().source();
++    CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_, MDB_FIRST),
++        MDB_SUCCESS) << "mdb_cursor_get failed";
++    break;
++  default:
++    LOG(FATAL) << "Unknown database backend";
++  }
++
++  // Check if we would need to randomly skip a few data points
++  if (this->layer_param_.data_param().rand_skip()) {
++    unsigned int skip = caffe_rng_rand() %
++                        this->layer_param_.data_param().rand_skip();
++    LOG(INFO) << "Skipping first " << skip << " data points.";
++    while (skip-- > 0) {
++      switch (this->layer_param_.data_param().backend()) {
++      case DataParameter_DB_LEVELDB:
++        iter_->Next();
++        if (!iter_->Valid()) {
++          iter_->SeekToFirst();
++        }
++        break;
++      case DataParameter_DB_LMDB:
++        if (mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_, MDB_NEXT)
++            != MDB_SUCCESS) {
++          CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_,
++                   MDB_FIRST), MDB_SUCCESS);
++        }
++        break;
++      default:
++        LOG(FATAL) << "Unknown database backend";
++      }
++    }
++  }
++  // Read a data point, and use it to initialize the top blob.
++  Datum datum;
++  string value;
++  CvMat mat;
++  IplImage *img = NULL;
++  switch (this->layer_param_.data_param().backend()) {
++  case DataParameter_DB_LEVELDB:
++      value = this->iter_->value().ToString();
++      mat = cvMat(1, 1000 * 1000 * 3, CV_8UC1, const_cast<char *>(value.data()) + sizeof(int));
++
++      //datum.ParseFromString(iter_->value().ToString());
++    break;
++  case DataParameter_DB_LMDB:
++      mat = cvMat(1, 1000 * 1000 * 3, CV_8UC1, (char *)(mdb_value_.mv_data) + sizeof(int));
++    //datum.ParseFromArray(mdb_value_.mv_data, mdb_value_.mv_size);
++    break;
++  default:
++    LOG(FATAL) << "Unknown database backend";
++  }
++  img = cvDecodeImage(&mat, 1);
++  // datum size
++  this->datum_channels_ = img->nChannels;
++  cvReleaseImage(&img);
++
++  // image
++  int crop_size = this->layer_param_.transform_param().crop_size();
++  CHECK_GT(crop_size, 0) << "crop size must be greater than 0";
++  (*top)[0]->Reshape(this->layer_param_.data_param().batch_size(),
++                     this->datum_channels_ , crop_size, crop_size);
++  this->prefetch_data_.Reshape(this->layer_param_.data_param().batch_size(),
++      this->datum_channels_ , crop_size, crop_size);
++
++  LOG(INFO) << "output data size: " << (*top)[0]->num() << ","
++      << (*top)[0]->channels() << "," << (*top)[0]->height() << ","
++      << (*top)[0]->width();
++  // label
++  if (this->output_labels_) {
++    (*top)[1]->Reshape(this->layer_param_.data_param().batch_size(), 1, 1, 1);
++    this->prefetch_label_.Reshape(this->layer_param_.data_param().batch_size(),
++        1, 1, 1);
++  }
++  this->datum_height_ = crop_size;
++  this->datum_width_ = crop_size;
++  this->datum_size_ = this->datum_channels_ * this->datum_height_ * this->datum_width_;
++}
++
++// This function is used to create a thread that prefetches the data.
++template <typename Dtype>
++void CompactDataLayer<Dtype>::InternalThreadEntry() {
++  Datum datum;
++  string value;
++  CvMat mat;
++  IplImage *img = NULL;
++  CHECK(this->prefetch_data_.count());
++  Dtype* top_data = this->prefetch_data_.mutable_cpu_data();
++  Dtype* top_label = NULL;  // suppress warnings about uninitialized variables
++  if (this->output_labels_) {
++    top_label = this->prefetch_label_.mutable_cpu_data();
++  }
++  const int batch_size = this->layer_param_.data_param().batch_size();
++
++  for (int item_id = 0; item_id < batch_size; ++item_id) {
++    // get a blob
++    switch (this->layer_param_.data_param().backend()) {
++    case DataParameter_DB_LEVELDB:
++      CHECK(iter_);
++      CHECK(iter_->Valid());
++      value = iter_->value().ToString();
++      mat = cvMat(1, 1000 * 1000, CV_8UC1, const_cast<char *>(value.data()) + sizeof(int));
++
++      // datum.ParseFromString(iter_->value().ToString());
++      break;
++    case DataParameter_DB_LMDB:
++      //LOG(FATAL) << "LMDB is not supported at present";
++      CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_,
++              &mdb_value_, MDB_GET_CURRENT), MDB_SUCCESS);
++      mat = cvMat(1, 1000 * 1000 * 3, CV_8UC1, (char *)(mdb_value_.mv_data) + sizeof(int));
++      // datum.ParseFromArray(mdb_value_.mv_data,
++      //     mdb_value_.mv_size);
++      break;
++    default:
++      LOG(FATAL) << "Unknown database backend";
++    }
++
++    img = cvDecodeImage(&mat, 1);
++    // Apply data transformations (mirror, scale, crop...)
++    this->data_transformer_.Transform(item_id, img, this->mean_, top_data);
++    cvReleaseImage(&img);  // release current image
++    if (this->output_labels_) {
++      //top_label[item_id] = datum.label();
++      switch(this->layer_param_.data_param().backend()) {
++        case DataParameter_DB_LEVELDB:
++          top_label[item_id] = *((int *)const_cast<char *>(value.data()));
++          break;
++        case DataParameter_DB_LMDB:
++          top_label[item_id] = *((int *)mdb_value_.mv_data);
++          break;
++        default:
++          LOG(FATAL) << "Unkown database backend";
++      }
++      // LOG(INFO) << "label: " << top_label[item_id];
++    }
++
++    // go to the next iter
++    switch (this->layer_param_.data_param().backend()) {
++    case DataParameter_DB_LEVELDB:
++      iter_->Next();
++      if (!iter_->Valid()) {
++        // We have reached the end. Restart from the first.
++        DLOG(INFO) << "Restarting data prefetching from start.";
++        iter_->SeekToFirst();
++      }
++      break;
++    case DataParameter_DB_LMDB:
++      if (mdb_cursor_get(mdb_cursor_, &mdb_key_,
++              &mdb_value_, MDB_NEXT) != MDB_SUCCESS) {
++        // We have reached the end. Restart from the first.
++        DLOG(INFO) << "Restarting data prefetching from start.";
++        CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_,
++                &mdb_value_, MDB_FIRST), MDB_SUCCESS);
++      }
++      break;
++    default:
++      LOG(FATAL) << "Unknown database backend";
++    }
++  }
++}
++
++INSTANTIATE_CLASS(CompactDataLayer);
++
++}  // namespace caffe
+diff --git a/src/caffe/layers/cudnn_pooling_layer.cu b/src/caffe/layers/cudnn_pooling_layer.cu
+index 99c409d..0e9c1a3 100644
+--- a/src/caffe/layers/cudnn_pooling_layer.cu
++++ b/src/caffe/layers/cudnn_pooling_layer.cu
+@@ -14,7 +14,7 @@ void CuDNNPoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+     vector<Blob<Dtype>*>* top) {
+   // Fallback to Caffe for padded pooling, max top mask.
+   if ((this->pad_h_ > 0 || this->pad_w_ > 0) || (*top).size() > 1) {
+-    LOG(WARNING) << "Falling back to standard Caffe for padded pooling.";
++    //LOG(WARNING) << "Falling back to standard Caffe for padded pooling.";
+     return PoolingLayer<Dtype>::Forward_gpu(bottom, top);
+   }
+ 
+@@ -33,7 +33,7 @@ void CuDNNPoolingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
+ 
+   // Fallback to Caffe for padded pooling, max top mask.
+   if ((this->pad_h_ > 0 || this->pad_w_ > 0) || top.size() > 1) {
+-    LOG(WARNING) << "Falling back to standard Caffe for padded pooling.";
++    // LOG(WARNING) << "Falling back to standard Caffe for padded pooling.";
+     return PoolingLayer<Dtype>::Backward_gpu(top, propagate_down, bottom);
+   }
+ 
+diff --git a/src/caffe/layers/label_transform_layer.cpp b/src/caffe/layers/label_transform_layer.cpp
+new file mode 100644
+index 0000000..4b2e0c9
+--- /dev/null
++++ b/src/caffe/layers/label_transform_layer.cpp
+@@ -0,0 +1,68 @@
++#include "caffe/data_layers.hpp"
++#include <fstream>
++
++using namespace std;
++
++namespace caffe {
++
++template <typename Dtype>
++void LabelTransformLayer<Dtype>::LayerSetup(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top) {
++    LabelTransformParameter trans_param = this->layer_param_.label_transform_param();
++    CHECK(trans_param.has_label_transform_file()) << this->layer_param_.name() << " No label transform file provided";
++    CHECK_EQ(bottom.size(), 1) << this->layer_param_.name() << "LabelTransformLayer only support one input blob";
++    CHECK_EQ(top->size(), 1) << this->layer_param_.name() << "LabelTransformLayer only support one output blob";
++
++    ifstream trans_file(trans_param.label_transform_file().c_str());
++    CHECK(trans_file.is_open());
++    int label_to, cnt;
++    // set<int> from, to;
++
++    // while (trans_file >> label_from >> label_to) {
++    //     label_table_.insert(pair<int, int>(label_from, label_to));
++    //     from.insert(label_from);
++    //     to.insert(label_to);
++    // }
++    new_labels_.clear();
++    cnt = 0;
++    while (trans_file >> label_to) {
++        new_labels_.push_back(label_to);
++        if (label_to >= 0)
++            cnt++;
++    }
++
++    LOG(INFO) << this->layer_param_.name() << "Transform to "
++          << cnt << " labels";
++}
++
++template <typename Dtype>
++void LabelTransformLayer<Dtype>::Reshape(
++    const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++    (*top)[0]->Reshape(bottom[0]->num(), 1, 1, 1);
++}
++
++template <typename Dtype>
++void LabelTransformLayer<Dtype>::Forward_cpu(
++    const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++    int num = bottom[0]->num();
++    const Dtype* label_in = bottom[0]->cpu_data();
++    Dtype* label_out = (*top)[0]->mutable_cpu_data();
++
++    for (int i = 0; i < num; i++) {
++        label_out[i] = new_labels_[(int)(label_in[i])];
++    }
++}
++
++template <typename Dtype>
++void LabelTransformLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
++      const vector<bool>& propagate_down,
++      vector<Blob<Dtype>*>* bottom) {
++    if (propagate_down[0]) {
++        LOG(FATAL) << this->layer_param_.name()
++            << " Layer cannot backpropagate to label inputs.";
++    }
++}
++
++INSTANTIATE_CLASS(LabelTransformLayer);
++}
++
+diff --git a/src/caffe/layers/label_transform_layer.cu b/src/caffe/layers/label_transform_layer.cu
+new file mode 100644
+index 0000000..e69de29
+diff --git a/src/caffe/layers/softmax_loss_tree_layer.cpp b/src/caffe/layers/softmax_loss_tree_layer.cpp
+new file mode 100644
+index 0000000..b1af3ef
+--- /dev/null
++++ b/src/caffe/layers/softmax_loss_tree_layer.cpp
+@@ -0,0 +1,253 @@
++#include <cfloat>
++#include <vector>
++#include <fstream>
++#include <iostream>
++
++#include "caffe/layer.hpp"
++#include "caffe/util/math_functions.hpp"
++#include "caffe/vision_layers.hpp"
++
++namespace caffe{
++
++template <typename Dtype>
++void SoftmaxWithLossTreeLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top) {
++  LossLayer<Dtype>::LayerSetUp(bottom, top);
++
++  // make a buffer
++  vector<Dtype> lw_buffer;
++  for (int t = 0; t < top->size(); ++t)
++    lw_buffer.push_back(this->layer_param_.loss_weight(t));
++  this->layer_param_.clear_loss_weight();
++  //
++
++  TreeParameter tree_param = this->layer_param_.tree_param();
++  tree_depth_ = tree_param.tree_depth();
++  depth_end_position_.push_back(0);
++
++  CHECK(tree_param.label_transform_file_size() > 0) << this->layer_param_.name() << " No label transform file provided";
++  // each node is a classifier
++  num_nodes_ = tree_param.label_transform_file_size();
++  CHECK(tree_param.node_weight_size() <= num_nodes_) << this->layer_param_.name() << " node_weight should not be bigger than node size";
++  for (int t = 0; t < tree_param.node_weight_size(); ++t) {
++    node_weight_.push_back(tree_param.node_weight(t));
++  }
++  while (node_weight_.size() < num_nodes_)
++    node_weight_.push_back(Dtype(1.0));
++
++  int bottom_size = this->layer_param_.bottom_size();
++  int top_size = this->layer_param_.top_size();
++  softmax_bottom_vec_.resize(num_nodes_);
++  softmax_top_vec_.resize(num_nodes_);
++  softmax_layer_.resize(num_nodes_);
++  prob_.resize(num_nodes_);
++  // TODO: add layer_weight here
++  CHECK_EQ(bottom_size, num_nodes_+1) << "labels should match with bottom blobs input";
++  CHECK_EQ(top_size, tree_depth_) << "top num should match with tree depth";
++  new_labels_.resize(num_nodes_);
++  node_loss_.resize(num_nodes_);
++  int to_read = 1; // number to read in the current depth
++  int depth_level = 0; // current depth level
++  for (int t = 0; t < num_nodes_; ++t) {
++    softmax_bottom_vec_[t].clear();
++    softmax_top_vec_[t].clear();
++    prob_[t].reset(new Blob<Dtype>());
++    softmax_layer_[t].reset(new SoftmaxLayer<Dtype>(this->layer_param_));
++    // read the label file
++    std::ifstream trans_file(tree_param.label_transform_file(t).c_str());
++    CHECK(trans_file.is_open());
++    int label_to;
++    set<int> to;
++    new_labels_[t].clear();
++    while (trans_file >> label_to) {
++        new_labels_[t].push_back(label_to);
++        if (label_to >= 0) {
++          to.insert(label_to);
++        }
++    }
++    trans_file.close();
++    num_classes_.push_back(to.size());
++
++    LOG(INFO) << this->layer_param_.name() << ": Transform to "
++          << to.size() << " unique labels";
++    CHECK_EQ(to.size(), bottom[t]->count()/bottom[t]->num()) << this->layer_param_.name()
++          << ": mismatched label sets and softmax dim";
++    // construct a tree
++    to_read -= 1; 
++    if (to_read == 0) {
++      depth_end_position_.push_back(t+1);
++      to_read = 0;
++      depth_level ++;
++      for (int tr = depth_end_position_[depth_level-1]; tr < depth_end_position_[depth_level]; ++tr)
++        to_read += num_classes_[tr];
++    }
++    // setup softmax layer
++    softmax_bottom_vec_[t].push_back(bottom[t]);
++    softmax_top_vec_[t].push_back(prob_[t].get());
++    softmax_layer_[t]->SetUp(softmax_bottom_vec_[t], &softmax_top_vec_[t]);
++  }
++  for (int t = 0; t < top->size(); ++t)
++    this->layer_param_.add_loss_weight(lw_buffer[t]);
++}
++
++template <typename Dtype>
++void SoftmaxWithLossTreeLayer<Dtype>::Reshape(
++    const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++  LossLayer<Dtype>::Reshape(bottom, top);
++  for ( int t = 0; t < num_nodes_; ++t) {
++    softmax_layer_[t]->Reshape(softmax_bottom_vec_[t], &softmax_top_vec_[t]);
++    // Don't need this. Deprecated.
++    //if (top->size() >= 2) {
++      // softmax output
++     // (*top)[1]->ReshapeLike(*bottom[0]);
++   // }
++  }
++  for (int d = 0; d < tree_depth_; ++d) {
++    (*top)[d]->Reshape(1, 1, 1, 1);
++  }
++}
++
++template <typename Dtype>
++void SoftmaxWithLossTreeLayer<Dtype>::Forward_cpu(
++    const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++  // The forward pass computes the softmax prob values.
++  for ( int t = 0; t < num_nodes_; ++t) {
++    softmax_layer_[t]->Forward(softmax_bottom_vec_[t], &(softmax_top_vec_[t]));
++    const Dtype* prob_data = prob_[t]->cpu_data();
++    const Dtype* label = bottom[num_nodes_]->cpu_data();
++    int num = this->prob_[t]->num();
++    int dim = this->prob_[t]->count() / num;
++    int spatial_dim = prob_[t]->height() * prob_[t]->width();
++    CHECK(prob_[t]->height() == 1);
++    CHECK(prob_[t]->width() == 1);
++    Dtype loss = 0;
++    int sample_cnt_ = 0;
++    for (int i = 0; i < num; ++i) {
++      for (int j = 0; j < spatial_dim; j++) {
++        int raw_label = static_cast<int>(label[i * spatial_dim + j]);
++        int this_label = new_labels_[t][raw_label];
++        sample_cnt_++;
++        if (this_label >= 0) {
++          loss -= log(std::max(prob_data[i * dim +
++                                this_label * spatial_dim + j],
++                               Dtype(FLT_MIN)));
++        }
++      }
++    }
++    if (sample_cnt_ > 0)
++      node_loss_[t] = loss / num / spatial_dim;
++    else
++      ; //(*top)[0]->mutable_cpu_data()[0] = 0;
++  }
++  
++  // output the loss per tree layer
++  for (int d = 0; d < tree_depth_; ++d) {
++    (*top)[d]->mutable_cpu_data()[0] = 0;
++    for (int n = depth_end_position_[d]; n < depth_end_position_[d+1]; ++n) {
++      (*top)[d]->mutable_cpu_data()[0] += node_loss_[n];
++    }
++  }
++}
++
++template <typename Dtype>
++void SoftmaxWithLossTreeLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
++    const vector<bool>& propagate_down,
++    vector<Blob<Dtype>*>* bottom) {
++  if (propagate_down[num_nodes_]) {
++    LOG(FATAL) << this->type_name()
++               << " Layer cannot backpropagate to label inputs.";
++  }
++  if (propagate_down[0]) {
++    int num = prob_[0]->num();
++    // initialize the bottom diff to zeros
++    for (int t = 0; t < num_nodes_; ++t) {
++      Dtype* bottom_diff = (*bottom)[t]->mutable_cpu_diff();
++      caffe_set((*bottom)[t]->count(), Dtype(0), bottom_diff);
++    }
++    const Dtype* label = (*bottom)[num_nodes_]->cpu_data();
++    for (int i = 0; i < num; ++i) {
++      int node_idx = 0;
++      int depth_level = 0;
++      while(depth_level < tree_depth_) {
++        Dtype* bottom_diff = (*bottom)[node_idx]->mutable_cpu_diff();
++        const Dtype* prob_data = prob_[node_idx]->cpu_data();
++        int num = prob_[node_idx]->num();
++        int dim = prob_[node_idx]->count() / num;
++        int spatial_dim = prob_[node_idx]->height() * prob_[node_idx]->width();
++        CHECK(prob_[node_idx]->height() == 1);
++        CHECK(prob_[node_idx]->width() == 1);
++        caffe_copy(dim, prob_data + i * dim, bottom_diff + i * dim);
++  
++        int this_label;
++        for (int j = 0; j < spatial_dim; ++j) {
++          int raw_label = static_cast<int>(label[i * spatial_dim + j]);
++          this_label = new_labels_[node_idx][raw_label];
++          if (this_label >= 0) {
++            bottom_diff[i * dim + this_label
++                * spatial_dim + j] -= 1;
++          }
++          else {
++            // if we set the diff to zero, we assume the negatives have no gradient
++            LOG(INFO) << "should never reach here";
++            caffe_set(dim, Dtype(0), bottom_diff + i * dim);
++            // otherwise, we should leave the bottom_diff unchanged
++          }
++        }
++        // check if this layer classifies correctly
++        std::vector<std::pair<Dtype, int> > prob_data_vector;
++        for (int j = 0; j < dim; ++j) {
++          prob_data_vector.push_back(
++              std::make_pair(prob_data[i * dim + j], j));
++        }
++        std::partial_sort(
++            prob_data_vector.begin(), prob_data_vector.begin() + 1,
++            prob_data_vector.end(), std::greater<std::pair<Dtype, int> >());
++        // if not, no gradient from children
++        if (prob_data_vector[0].second != this_label) {
++          break;
++        }
++        // if yes, go on with child
++        int skip_nodes = 0;
++        for (int node = depth_end_position_[depth_level]; node < node_idx; node++) {
++          skip_nodes += num_classes_[node];
++        }
++        node_idx = depth_end_position_[depth_level+1] + skip_nodes + this_label;
++
++        depth_level++;
++      }
++      // recurssively set the children classifier to be zero
++      // ResetChildrenGradient(bottom, i, node_idx, depth_level);
++    }
++    // Scale gradient
++    for (int d = 0; d < tree_depth_; ++d) {
++      const Dtype loss_weight = top[d]->cpu_diff()[0];
++      for (int n = depth_end_position_[d]; n < depth_end_position_[d+1]; ++n) {
++        Dtype* bottom_diff = (*bottom)[n]->mutable_cpu_diff();
++        int spatial_dim = prob_[n]->height() * prob_[n]->width();
++        caffe_scal(prob_[n]->count(), loss_weight * node_weight_[n] / num / spatial_dim, bottom_diff);
++      }
++    }
++  }
++}
++
++template <typename Dtype>
++void SoftmaxWithLossTreeLayer<Dtype>::ResetChildrenGradient(vector<Blob<Dtype>*>* bottom, 
++    int i, int node_idx, int depth_level) {
++  if (depth_level < tree_depth_) {
++    int skip_nodes = 0;
++    for (int node = depth_end_position_[depth_level]; node < node_idx; node++) {
++      skip_nodes += num_classes_[node];
++    }
++    for (int c = 0; c < num_classes_[node_idx]; ++c) {
++      int child_node = depth_end_position_[depth_level+1] + skip_nodes + c;
++      Dtype* bottom_diff = (*bottom)[child_node]->mutable_cpu_diff();
++      int dim = prob_[child_node]->count() / prob_[child_node]->num();
++      caffe_set(dim, Dtype(0), bottom_diff + i * dim);
++      ResetChildrenGradient(bottom, i, child_node, depth_level+1);
++    }
++  }
++}
++
++INSTANTIATE_CLASS(SoftmaxWithLossTreeLayer);
++
++}
+diff --git a/src/caffe/layers/softmax_loss_tree_layer.cu b/src/caffe/layers/softmax_loss_tree_layer.cu
+new file mode 100644
+index 0000000..f582ca8
+--- /dev/null
++++ b/src/caffe/layers/softmax_loss_tree_layer.cu
+@@ -0,0 +1,27 @@
++#include <algorithm>
++#include <cfloat>
++#include <vector>
++
++#include "caffe/layer.hpp"
++#include "caffe/util/math_functions.hpp"
++#include "caffe/vision_layers.hpp"
++
++namespace caffe {
++
++template <typename Dtype>
++void SoftmaxWithLossTreeLayer<Dtype>::Forward_gpu(
++    const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++  Forward_cpu(bottom, top);
++}
++
++template <typename Dtype>
++void SoftmaxWithLossTreeLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
++    const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
++  // TODO(Yangqing): implement the GPU version of softmax.
++  Backward_cpu(top, propagate_down, bottom);
++}
++
++INSTANTIATE_CLASS(SoftmaxWithLossTreeLayer);
++
++
++}  // namespace caffe
+diff --git a/src/caffe/layers/transform_accuracy_layer.cpp b/src/caffe/layers/transform_accuracy_layer.cpp
+new file mode 100644
+index 0000000..60030ac
+--- /dev/null
++++ b/src/caffe/layers/transform_accuracy_layer.cpp
+@@ -0,0 +1,90 @@
++#include <algorithm>
++#include <functional>
++#include <utility>
++#include <vector>
++
++#include "caffe/layer.hpp"
++#include "caffe/util/io.hpp"
++#include "caffe/util/math_functions.hpp"
++#include "caffe/vision_layers.hpp"
++
++namespace caffe {
++
++template <typename Dtype>
++void TransformAccuracyLayer<Dtype>::LayerSetUp(
++  const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++  top_k_ = this->layer_param_.accuracy_param().top_k();
++  LabelTransformParameter trans_param = this->layer_param_.label_transform_param();
++  CHECK(trans_param.has_label_transform_file()) << this->layer_param_.name() << " No label transform provided";
++  std::ifstream trans_file(trans_param.label_transform_file().c_str());
++  CHECK(trans_file.is_open());
++  int label_to;
++  set<int> to;
++
++  new_labels_.clear();
++  while (trans_file >> label_to) {
++    new_labels_.push_back(label_to);
++    if (label_to >= 0) {
++      to.insert(label_to);
++    }
++  }
++  trans_file.close();
++  
++  LOG(INFO) << this->layer_param_.name() << ": Transform to "
++      << to.size() << " unique labels";
++  CHECK_EQ(to.size(), bottom[0]->count()/bottom[0]->num()) << this->layer_param_.name()
++      << ": mismatched label sets and softmax dim";
++}
++
++template <typename Dtype>
++void TransformAccuracyLayer<Dtype>::Reshape(
++  const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++  CHECK_EQ(bottom[0]->num(), bottom[1]->num())
++      << "The data and label should have the same number.";
++  CHECK_LE(top_k_, bottom[0]->count() / bottom[0]->num())
++      << "top_k must be less than or equal to the number of classes.";
++  CHECK_EQ(bottom[1]->channels(), 1);
++  CHECK_EQ(bottom[1]->height(), 1);
++  CHECK_EQ(bottom[1]->width(), 1);
++  (*top)[0]->Reshape(1, 1, 1, 1);
++}
++
++template <typename Dtype>
++void TransformAccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
++    vector<Blob<Dtype>*>* top) {
++  Dtype accuracy = 0;
++  const Dtype* bottom_data = bottom[0]->cpu_data();
++  const Dtype* bottom_label = bottom[1]->cpu_data();
++  int num = bottom[0]->num();
++  int dim = bottom[0]->count() / bottom[0]->num();
++  vector<Dtype> maxval(top_k_+1);
++  vector<int> max_id(top_k_+1);
++  for (int i = 0; i < num; ++i) {
++    // Top-k accuracy
++    std::vector<std::pair<Dtype, int> > bottom_data_vector;
++    for (int j = 0; j < dim; ++j) {
++      bottom_data_vector.push_back(
++          std::make_pair(bottom_data[i * dim + j], j));
++    }
++    std::partial_sort(
++        bottom_data_vector.begin(), bottom_data_vector.begin() + top_k_,
++        bottom_data_vector.end(), std::greater<std::pair<Dtype, int> >());
++    // check if true label is in top k predictions
++    int label_in = static_cast<int>(bottom_label[i]);
++    int label_out = new_labels_[label_in];
++    for (int k = 0; k < top_k_; k++) {
++      if (bottom_data_vector[k].second == label_out) {
++        ++accuracy;
++        break;
++      }
++    }
++  }
++
++  // LOG(INFO) << "Accuracy: " << accuracy;
++  (*top)[0]->mutable_cpu_data()[0] = accuracy / num;
++  // Accuracy layer should not be used as a loss function.
++}
++
++INSTANTIATE_CLASS(TransformAccuracyLayer);
++
++}  // namespace caffe
+diff --git a/src/caffe/layers/transform_softmax_loss_layer.cpp b/src/caffe/layers/transform_softmax_loss_layer.cpp
+new file mode 100644
+index 0000000..a9428d8
+--- /dev/null
++++ b/src/caffe/layers/transform_softmax_loss_layer.cpp
+@@ -0,0 +1,116 @@
++#include <cfloat>
++#include <vector>
++#include <fstream>
++#include <iostream>
++
++#include "caffe/layer.hpp"
++#include "caffe/util/math_functions.hpp"
++#include "caffe/vision_layers.hpp"
++
++namespace caffe{
++
++template <typename Dtype>
++void TransformSoftmaxWithLossLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
++      vector<Blob<Dtype>*>* top) {
++  SoftmaxWithLossLayer<Dtype>::LayerSetUp(bottom, top);
++
++  LabelTransformParameter trans_param = this->layer_param_.label_transform_param();
++  CHECK(trans_param.has_label_transform_file()) << this->layer_param_.name() << " No label transform file provided";
++  std::ifstream trans_file(trans_param.label_transform_file().c_str());
++  CHECK(trans_file.is_open());
++  int label_to;
++  set<int> to;
++
++  new_labels_.clear();
++  while (trans_file >> label_to) {
++      new_labels_.push_back(label_to);
++      if (label_to >= 0) {
++          to.insert(label_to);
++      }
++  }
++  trans_file.close();
++
++  LOG(INFO) << this->layer_param_.name() << ": Transform to "
++          << to.size() << " unique labels";
++  CHECK_EQ(to.size(), bottom[0]->count()/bottom[0]->num()) << this->layer_param_.name()
++        << ": mismatched label sets and softmax dim";
++}
++
++template <typename Dtype>
++void TransformSoftmaxWithLossLayer<Dtype>::Forward_cpu(
++    const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
++  // The forward pass computes the softmax prob values.
++  this->softmax_layer_->Forward(this->softmax_bottom_vec_, &(this->softmax_top_vec_));
++  const Dtype* prob_data = this->prob_.cpu_data();
++  const Dtype* label = bottom[1]->cpu_data();
++  int num = this->prob_.num();
++  int dim = this->prob_.count() / num;
++  int spatial_dim = this->prob_.height() * this->prob_.width();
++  CHECK(this->prob_.height() == 1);
++  CHECK(this->prob_.width() == 1);
++  Dtype loss = 0;
++  sample_cnt_ = 0;
++  for (int i = 0; i < num; ++i) {
++    for (int j = 0; j < spatial_dim; j++) {
++      int label_in = (int)(label[i * spatial_dim + j]);
++      int label_out = new_labels_[label_in];
++      sample_cnt_++;
++      //std::cout << "(" << label_in << ", " << label_out << ") ";
++      if (label_out >= 0) {
++        loss -= log(std::max(prob_data[i * dim +
++                              label_out * spatial_dim + j],
++                             Dtype(FLT_MIN)));
++      }
++    }
++  }
++  //std::cout << std::endl;
++  if (sample_cnt_ > 0)
++    (*top)[0]->mutable_cpu_data()[0] = loss / num / spatial_dim;
++  else
++    ; //(*top)[0]->mutable_cpu_data()[0] = 0;
++  if (top->size() == 2) {
++    (*top)[1]->ShareData(this->prob_);
++  }
++}
++
++template <typename Dtype>
++void TransformSoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
++    const vector<bool>& propagate_down,
++    vector<Blob<Dtype>*>* bottom) {
++  if (propagate_down[1]) {
++    LOG(FATAL) << this->type_name()
++               << " Layer cannot backpropagate to label inputs.";
++  }
++  if (propagate_down[0]) {
++    Dtype* bottom_diff = (*bottom)[0]->mutable_cpu_diff();
++    const Dtype* prob_data = this->prob_.cpu_data();
++    caffe_copy(this->prob_.count(), prob_data, bottom_diff);
++    const Dtype* label = (*bottom)[1]->cpu_data();
++    int num = this->prob_.num();
++    int dim = this->prob_.count() / num;
++    int spatial_dim = this->prob_.height() * this->prob_.width();
++    CHECK(this->prob_.height() == 1);
++    CHECK(this->prob_.width() == 1);
++    for (int i = 0; i < num; ++i) {
++      for (int j = 0; j < spatial_dim; ++j) {
++        int label_in = (int)(label[i * spatial_dim + j]);
++        int label_out = new_labels_[label_in];
++        if (label_out >= 0) {
++          bottom_diff[i * dim + label_out
++              * spatial_dim + j] -= 1;
++        }
++        else {
++          // if we set the diff to zero, we assume the negatives have no gradient
++          caffe_set(dim, Dtype(0), bottom_diff + i * dim);
++          // otherwise, we should leave the bottom_diff unchanged
++        }
++      }
++    }
++    // Scale gradient
++    const Dtype loss_weight = top[0]->cpu_diff()[0];
++    caffe_scal(this->prob_.count(), loss_weight / num / spatial_dim, bottom_diff);
++  }
++}
++INSTANTIATE_CLASS(TransformSoftmaxWithLossLayer);
++
++}
+diff --git a/src/caffe/net.cpp b/src/caffe/net.cpp
+index 6f4a651..6adaa3c 100644
+--- a/src/caffe/net.cpp
++++ b/src/caffe/net.cpp
+@@ -783,6 +783,19 @@ void Net<Dtype>::Update() {
+   }
+ }
+ 
++// added for allowing bigger batch size
++template <typename Dtype>
++void Net<Dtype>::AccumulateDiff(){
++  for (int i = 0; i < params_.size(); ++i)
++    params_[i]->AccumulateDiff();
++}
++
++template <typename Dtype>
++void Net<Dtype>::UpdateDiff(){
++  for (int i = 0; i < params_.size(); ++i)
++    params_[i]->UpdateDiff();
++}
++
+ template <typename Dtype>
+ bool Net<Dtype>::has_blob(const string& blob_name) {
+   return blob_names_index_.find(blob_name) != blob_names_index_.end();
+diff --git a/src/caffe/proto/caffe.proto b/src/caffe/proto/caffe.proto
+index 9395c38..22f30c2 100644
+--- a/src/caffe/proto/caffe.proto
++++ b/src/caffe/proto/caffe.proto
+@@ -140,6 +140,8 @@ message SolverParameter {
+   // random number generator -- useful for reproducible results. Otherwise,
+   // (and by default) initialize using a seed derived from the system clock.
+   optional int64 random_seed = 20 [default = -1];
++  // added to allow big batch_size
++  optional int32 update_interval = 33 [default = 1];
+ 
+   // Solver type
+   enum SolverType {
+@@ -154,6 +156,7 @@ message SolverParameter {
+   // If true, print information about the state of the net that may help with
+   // debugging learning problems.
+   optional bool debug_info = 23 [default = false];
++  optional int32 debug_display = 40;
+ 
+   // If false, don't save a snapshot after training finishes.
+   optional bool snapshot_after_train = 28 [default = true];
+@@ -198,7 +201,7 @@ message NetStateRule {
+ // NOTE
+ // Update the next available ID when you add a new LayerParameter field.
+ //
+-// LayerParameter next available ID: 41 (last added: contrastive_loss_param)
++// LayerParameter next available ID: 42 (last added: label_transform_param)
+ message LayerParameter {
+   repeated string bottom = 2; // the name of the bottom blobs
+   repeated string top = 3; // the name of the top blobs
+@@ -219,7 +222,7 @@ message LayerParameter {
+   // line above the enum. Update the next available ID when you add a new
+   // LayerType.
+   //
+-  // LayerType next available ID: 38 (last added: CONTRASTIVE_LOSS)
++  // LayerType next available ID: 44 (last added: COMPACT_DATA) 
+   enum LayerType {
+     // "NONE" layer type is 0th enum element so that we don't cause confusion
+     // by defaulting to an existent LayerType (instead, should usually error if
+@@ -229,6 +232,7 @@ message LayerParameter {
+     ACCURACY = 1;
+     ARGMAX = 30;
+     BNLL = 2;
++    COMPACT_DATA = 43;
+     CONCAT = 3;
+     CONTRASTIVE_LOSS = 37;
+     CONVOLUTION = 4;
+@@ -245,6 +249,7 @@ message LayerParameter {
+     IMAGE_DATA = 12;
+     INFOGAIN_LOSS = 13;
+     INNER_PRODUCT = 14;
++    LABEL_TRANSFORM = 38;
+     LRN = 15;
+     MEMORY_DATA = 29;
+     MULTINOMIAL_LOGISTIC_LOSS = 16;
+@@ -260,6 +265,10 @@ message LayerParameter {
+     SPLIT = 22;
+     SLICE = 33;
+     TANH = 23;
++    TRANSFORM_SOFTMAX_LOSS = 39;
++    SOFTMAX_LOSS_TREE = 42;
++    ACCURACY_TREE = 41;
++    TRANSFORM_ACCURACY = 40;
+     WINDOW_DATA = 24;
+     THRESHOLD = 31;
+   }
+@@ -305,6 +314,8 @@ message LayerParameter {
+   optional ImageDataParameter image_data_param = 15;
+   optional InfogainLossParameter infogain_loss_param = 16;
+   optional InnerProductParameter inner_product_param = 17;
++  optional LabelTransformParameter label_transform_param = 41;
++  optional TreeParameter tree_param = 42;
+   optional LRNParameter lrn_param = 18;
+   optional MemoryDataParameter memory_data_param = 22;
+   optional MVNParameter mvn_param = 34;
+@@ -344,6 +355,7 @@ message TransformationParameter {
+   // Specify if we would like to randomly crop an image.
+   optional uint32 crop_size = 3 [default = 0];
+   optional string mean_file = 4;
++  optional bool multiscale = 5 [default = false];
+ }
+ 
+ // Message that stores parameters used by AccuracyLayer
+@@ -538,6 +550,18 @@ message InnerProductParameter {
+   optional FillerParameter bias_filler = 4; // The filler for the bias
+ }
+ 
++// Massage that stors paramters used by TransformSoftmaxWithLoss
++message LabelTransformParameter {
++  required string label_transform_file = 1;
++}
++
++// Massage that stors paramters used by TreeLayers
++message TreeParameter {
++  repeated float node_weight = 1;
++  required uint32 tree_depth = 2;
++  repeated string label_transform_file = 3;
++}
++
+ // Message that stores parameters used by LRNLayer
+ message LRNParameter {
+   optional uint32 local_size = 1 [default = 5];
+diff --git a/src/caffe/solver.cpp b/src/caffe/solver.cpp
+index ba26292..a08e0d6 100644
+--- a/src/caffe/solver.cpp
++++ b/src/caffe/solver.cpp
+@@ -35,6 +35,11 @@ void Solver<Dtype>::Init(const SolverParameter& param) {
+   if (param_.random_seed() >= 0) {
+     Caffe::set_random_seed(param_.random_seed());
+   }
++  // added for allowing bigger batch size
++  if (!param_.has_update_interval() || param_.update_interval() == 1)
++    Caffe::set_accumulate(false);
++  else
++    Caffe::set_accumulate(true);
+   // Scaffolding code
+   InitTrainNet();
+   InitTestNets();
+@@ -185,8 +190,23 @@ void Solver<Dtype>::Solve(const char* resume_file) {
+     }
+ 
+     const bool display = param_.display() && iter_ % param_.display() == 0;
+-    net_->set_debug_info(display && param_.debug_info());
+-    Dtype loss = net_->ForwardBackward(bottom_vec);
++    const bool debug_display = param_.debug_info() && iter_ % param_.debug_display() == 0;
++    net_->set_debug_info(debug_display);
++
++    // added for allowing bigger batch size
++    Dtype loss = 0;
++    if ( !Caffe::accumulate() )
++      loss = net_->ForwardBackward(bottom_vec);
++    else{
++      for (int acum_num = 0; acum_num < param_.update_interval() - 1; ++acum_num){
++        loss += net_->ForwardBackward(bottom_vec);
++        net_->AccumulateDiff();
++      }
++      loss += net_->ForwardBackward(bottom_vec);
++      net_->UpdateDiff();
++      loss /= Dtype(param_.update_interval());
++    }
++
+     if (display) {
+       LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
+       const vector<Blob<Dtype>*>& result = net_->output_blobs();
+@@ -402,8 +422,10 @@ void SGDSolver<Dtype>::ComputeUpdateValue() {
+   if (this->param_.display() && this->iter_ % this->param_.display() == 0) {
+     LOG(INFO) << "Iteration " << this->iter_ << ", lr = " << rate;
+   }
++  rate /= Dtype(this->param_.update_interval());
+   Dtype momentum = this->param_.momentum();
+   Dtype weight_decay = this->param_.weight_decay();
++  weight_decay *= Dtype(this->param_.update_interval());
+   string regularization_type = this->param_.regularization_type();
+   switch (Caffe::mode()) {
+   case Caffe::CPU:
+@@ -515,8 +537,10 @@ void NesterovSolver<Dtype>::ComputeUpdateValue() {
+   if (this->param_.display() && this->iter_ % this->param_.display() == 0) {
+     LOG(INFO) << "Iteration " << this->iter_ << ", lr = " << rate;
+   }
++  rate /= Dtype(this->param_.update_interval());
+   Dtype momentum = this->param_.momentum();
+   Dtype weight_decay = this->param_.weight_decay();
++  weight_decay *= Dtype(this->param_.update_interval());
+   string regularization_type = this->param_.regularization_type();
+   switch (Caffe::mode()) {
+   case Caffe::CPU:
+diff --git a/tools/convert_imageset_compact.cpp b/tools/convert_imageset_compact.cpp
+new file mode 100644
+index 0000000..c8bbdb5
+--- /dev/null
++++ b/tools/convert_imageset_compact.cpp
+@@ -0,0 +1,133 @@
++// Copyright 2014 BVLC and contributors.
++// This program converts a set of images to a leveldb by storing them as Datum
++// proto buffers.
++// Usage:
++//    convert_imageset ROOTFOLDER/ LISTFILE DB_NAME [0/1]
++// where ROOTFOLDER is the root folder that holds all the images, and LISTFILE
++// should be a list of files as well as their labels, in the format as
++//   subfolder1/file1.JPEG 7
++//   ....
++// if the last argument is 1, a random shuffle will be carried out before we
++// process the file lines.
++
++#include <glog/logging.h>
++#include <leveldb/db.h>
++#include <leveldb/write_batch.h>
++
++#include <algorithm>
++#include <fstream>  // NOLINT(readability/streams)
++#include <string>
++#include <utility>
++#include <vector>
++#include <cstdio>
++#include <opencv2/core/core.hpp>
++#include <opencv2/highgui/highgui.hpp>
++#include <opencv2/highgui/highgui_c.h>
++#include <opencv2/imgproc/imgproc.hpp>
++
++#include "caffe/proto/caffe.pb.h"
++#include "caffe/util/io.hpp"
++
++using namespace caffe;  // NOLINT(build/namespaces)
++using std::pair;
++using std::string;
++using namespace cv;
++using namespace std;
++
++int main(int argc, char** argv) {
++  ::google::InitGoogleLogging(argv[0]);
++  if (argc < 4 || argc > 5) {
++    printf("Convert a set of images to the leveldb format (JPEG-compressed) used\n"
++        "as input for Caffe.\n"
++        "Usage:\n"
++        "    convert_imageset ROOTFOLDER/ LISTFILE DB_NAME"
++        " RANDOM_SHUFFLE_DATA[0 or 1]\n"
++        "The ImageNet dataset for the training demo is at\n"
++        "    http://www.image-net.org/download-images\n");
++    return 1;
++  }
++  std::ifstream infile(argv[2]);
++  std::vector<std::pair<string, int> > lines;
++  string filename;
++  int label;
++  while (infile >> filename >> label) {
++    lines.push_back(std::make_pair(filename, label));
++  }
++  if (argc == 5 && argv[4][0] == '1') {
++    // randomly shuffle data
++    LOG(INFO) << "Shuffling data";
++    std::random_shuffle(lines.begin(), lines.end());
++  }
++  LOG(INFO) << "A total of " << lines.size() << " images.";
++
++  leveldb::DB* db;
++  leveldb::Options options;
++  options.error_if_exists = true;
++  options.create_if_missing = true;
++  options.write_buffer_size = 268435456;
++  LOG(INFO) << "Opening leveldb " << argv[3];
++  leveldb::Status status = leveldb::DB::Open(
++      options, argv[3], &db);
++  CHECK(status.ok()) << "Failed to open leveldb " << argv[3];
++
++  string root_folder(argv[1]);
++  Datum datum;
++  int count = 0;
++  const int kMaxKeyLength = 256;
++  char key_cstr[kMaxKeyLength];
++  leveldb::WriteBatch* batch = new leveldb::WriteBatch();
++  unsigned char buf[1000000];  // buffer for JPEG data
++  for (int line_id = 0; line_id < lines.size(); ++line_id) {
++    string img_path = root_folder + lines[line_id].first;
++    int label = lines[line_id].second;
++    if (line_id < 20)
++      LOG(INFO) << img_path << ", " << label;
++    FILE *fp = fopen(img_path.c_str(), "rb");
++    if (!fp) {
++      LOG(INFO) << img_path << " failed";
++      continue;
++    }
++    fseek(fp, 0, SEEK_END);
++    int size = ftell(fp); // get the size of the JPEG data
++    fseek(fp, 0, SEEK_SET); // move fp to the beginning
++    int *p = (int *)buf;
++    *p = label;
++    fread(buf + sizeof(int), sizeof(char), size, fp); // read JPEG data
++    fclose(fp);
++    // if (!ReadImageToDatum(root_folder + lines[line_id].first,
++    //                       lines[line_id].second, &datum)) {
++    //   continue;
++    // }
++    // if (!data_size_initialized) {
++    //   data_size = datum.channels() * datum.height() * datum.width();
++    //   data_size_initialized = true;
++    // } else {
++    //   const string& data = datum.data();
++    //   CHECK_EQ(data.size(), data_size) << "Incorrect data field size "
++    //       << data.size();
++    // }
++
++    // sequential
++    snprintf(key_cstr, kMaxKeyLength, "%08d_%s", line_id,
++        lines[line_id].first.c_str());
++    string value(buf, buf + sizeof(int) + size); // initilize string from buf
++    // get the value
++    // datum.SerializeToString(&value);
++    batch->Put(string(key_cstr), value);
++    if (++count % 1000 == 0) {
++      db->Write(leveldb::WriteOptions(), batch);
++      LOG(ERROR) << "Processed " << count << " files.";
++      delete batch;
++      batch = new leveldb::WriteBatch();
++    }
++  }
++  // write the last batch
++  if (count % 1000 != 0) {
++    db->Write(leveldb::WriteOptions(), batch);
++    LOG(ERROR) << "Processed " << count << " files.";
++  }
++
++  delete batch;
++  delete db;
++  return 0;
++}
+diff --git a/tools/convert_imageset_compact2.cpp b/tools/convert_imageset_compact2.cpp
+new file mode 100644
+index 0000000..f5825de
+--- /dev/null
++++ b/tools/convert_imageset_compact2.cpp
+@@ -0,0 +1,213 @@
++// This program converts a set of images to a lmdb/leveldb by storing them
++// as Datum proto buffers.
++// Usage:
++//   convert_imageset [FLAGS] ROOTFOLDER/ LISTFILE DB_NAME
++//
++// where ROOTFOLDER is the root folder that holds all the images, and LISTFILE
++// should be a list of files as well as their labels, in the format as
++//   subfolder1/file1.JPEG 7
++//   ....
++
++#include <gflags/gflags.h>
++#include <glog/logging.h>
++#include <leveldb/db.h>
++#include <leveldb/write_batch.h>
++#include <lmdb.h>
++#include <sys/stat.h>
++
++#include <algorithm>
++#include <fstream>  // NOLINT(readability/streams)
++#include <string>
++#include <utility>
++#include <vector>
++
++#include "caffe/proto/caffe.pb.h"
++#include "caffe/util/io.hpp"
++#include "caffe/util/rng.hpp"
++
++using namespace caffe;  // NOLINT(build/namespaces)
++using std::pair;
++using std::string;
++
++DEFINE_bool(gray, false,
++    "When this option is on, treat images as grayscale ones");
++DEFINE_bool(shuffle, false,
++    "Randomly shuffle the order of images and their labels");
++DEFINE_string(backend, "lmdb", "The backend for storing the result");
++DEFINE_int32(resize_width, 0, "Width images are resized to");
++DEFINE_int32(resize_height, 0, "Height images are resized to");
++
++int main(int argc, char** argv) {
++  ::google::InitGoogleLogging(argv[0]);
++
++#ifndef GFLAGS_GFLAGS_H_
++  namespace gflags = google;
++#endif
++
++  gflags::SetUsageMessage("Convert a set of images to the leveldb/lmdb\n"
++        "format used as input for Caffe.\n"
++        "Usage:\n"
++        "    convert_imageset [FLAGS] ROOTFOLDER/ LISTFILE DB_NAME\n"
++        "The ImageNet dataset for the training demo is at\n"
++        "    http://www.image-net.org/download-images\n");
++  gflags::ParseCommandLineFlags(&argc, &argv, true);
++
++  if (argc != 4) {
++    gflags::ShowUsageWithFlagsRestrict(argv[0], "tools/convert_imageset");
++    return 1;
++  }
++
++  bool is_color = !FLAGS_gray;
++  std::ifstream infile(argv[2]);
++  std::vector<std::pair<string, int> > lines;
++  string filename;
++  int label;
++  while (infile >> filename >> label) {
++    lines.push_back(std::make_pair(filename, label));
++  }
++  if (FLAGS_shuffle) {
++    // randomly shuffle data
++    LOG(INFO) << "Shuffling data";
++    shuffle(lines.begin(), lines.end());
++  }
++  LOG(INFO) << "A total of " << lines.size() << " images.";
++
++  const string& db_backend = FLAGS_backend;
++  const char* db_path = argv[3];
++
++  int resize_height = std::max<int>(0, FLAGS_resize_height);
++  int resize_width = std::max<int>(0, FLAGS_resize_width);
++
++  // Open new db
++  // lmdb
++  MDB_env *mdb_env;
++  MDB_dbi mdb_dbi;
++  MDB_val mdb_key, mdb_data;
++  MDB_txn *mdb_txn;
++  // leveldb
++  leveldb::DB* db;
++  leveldb::Options options;
++  options.error_if_exists = true;
++  options.create_if_missing = true;
++  options.write_buffer_size = 268435456;
++  leveldb::WriteBatch* batch = NULL;
++
++  // Open db
++  if (db_backend == "leveldb") {  // leveldb
++    LOG(INFO) << "Opening leveldb " << db_path;
++    leveldb::Status status = leveldb::DB::Open(
++        options, db_path, &db);
++    CHECK(status.ok()) << "Failed to open leveldb " << db_path
++        << ". Is it already existing?";
++    batch = new leveldb::WriteBatch();
++  } else if (db_backend == "lmdb") {  // lmdb
++    LOG(INFO) << "Opening lmdb " << db_path;
++    CHECK_EQ(mkdir(db_path, 0744), 0)
++        << "mkdir " << db_path << "failed";
++    CHECK_EQ(mdb_env_create(&mdb_env), MDB_SUCCESS) << "mdb_env_create failed";
++    CHECK_EQ(mdb_env_set_mapsize(mdb_env, 1099511627776), MDB_SUCCESS)  // 1TB
++        << "mdb_env_set_mapsize failed";
++    CHECK_EQ(mdb_env_open(mdb_env, db_path, 0, 0664), MDB_SUCCESS)
++        << "mdb_env_open failed";
++    CHECK_EQ(mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn), MDB_SUCCESS)
++        << "mdb_txn_begin failed";
++    CHECK_EQ(mdb_open(mdb_txn, NULL, 0, &mdb_dbi), MDB_SUCCESS)
++        << "mdb_open failed. Does the lmdb already exist? ";
++  } else {
++    LOG(FATAL) << "Unknown db backend " << db_backend;
++  }
++
++  // Storing to db
++  string root_folder(argv[1]);
++//  Datum datum;
++  int count = 0;
++  const int kMaxKeyLength = 256;
++  char key_cstr[kMaxKeyLength];
++  int data_size;
++  bool data_size_initialized = false;
++  unsigned char buf[1000000];  // buffer for JPEG data, 1MB
++
++  for (int line_id = 0; line_id < lines.size(); ++line_id) {
++    // if (!ReadImageToDatum(root_folder + lines[line_id].first,
++    //     lines[line_id].second, resize_height, resize_width, is_color, &datum)) {
++    //   continue;
++    // }
++    // if (!data_size_initialized) {
++    //   data_size = datum.channels() * datum.height() * datum.width();
++    //   data_size_initialized = true;
++    // } else {
++    //   const string& data = datum.data();
++    //   CHECK_EQ(data.size(), data_size) << "Incorrect data field size "
++    //       << data.size();
++    // }
++    string img_path = root_folder + lines[line_id].first;
++    int label = lines[line_id].second;
++    if (line_id < 20)
++      LOG(INFO) << img_path << ", " << label;
++    FILE *fp = fopen(img_path.c_str(), "rb");
++    if (!fp) {
++        LOG(INFO) << img_path << "failed";
++        continue;
++    }
++    fseek(fp, 0, SEEK_END);
++    int size = ftell(fp);   // get the size of the JPEG data
++    fseek(fp, 0, SEEK_SET); // move fp to the beginning
++    int *p = (int *)buf;
++    *p = label;
++    fread(buf + sizeof(int), sizeof(char), size, fp); // read JPEG data
++    fclose(fp);
++    // sequential
++    snprintf(key_cstr, kMaxKeyLength, "%08d_%s", line_id,
++        lines[line_id].first.c_str());
++    //datum.SerializeToString(&value);
++    string value(buf, buf + sizeof(int) + size);
++    string keystr(key_cstr);
++
++    // Put in db
++    if (db_backend == "leveldb") {  // leveldb
++      batch->Put(keystr, value);
++    } else if (db_backend == "lmdb") {  // lmdb
++      mdb_data.mv_size = value.size();
++      mdb_data.mv_data = reinterpret_cast<void*>(&value[0]);
++      mdb_key.mv_size = keystr.size();
++      mdb_key.mv_data = reinterpret_cast<void*>(&keystr[0]);
++      CHECK_EQ(mdb_put(mdb_txn, mdb_dbi, &mdb_key, &mdb_data, 0), MDB_SUCCESS)
++          << "mdb_put failed";
++    } else {
++      LOG(FATAL) << "Unknown db backend " << db_backend;
++    }
++
++    if (++count % 1000 == 0) {
++      // Commit txn
++      if (db_backend == "leveldb") {  // leveldb
++        db->Write(leveldb::WriteOptions(), batch);
++        delete batch;
++        batch = new leveldb::WriteBatch();
++      } else if (db_backend == "lmdb") {  // lmdb
++        CHECK_EQ(mdb_txn_commit(mdb_txn), MDB_SUCCESS)
++            << "mdb_txn_commit failed";
++        CHECK_EQ(mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn), MDB_SUCCESS)
++            << "mdb_txn_begin failed";
++      } else {
++        LOG(FATAL) << "Unknown db backend " << db_backend;
++      }
++      LOG(ERROR) << "Processed " << count << " files.";
++    }
++  }
++  // write the last batch
++  if (count % 1000 != 0) {
++    if (db_backend == "leveldb") {  // leveldb
++      db->Write(leveldb::WriteOptions(), batch);
++      delete batch;
++      delete db;
++    } else if (db_backend == "lmdb") {  // lmdb
++      CHECK_EQ(mdb_txn_commit(mdb_txn), MDB_SUCCESS) << "mdb_txn_commit failed";
++      mdb_close(mdb_env, mdb_dbi);
++      mdb_env_close(mdb_env);
++    } else {
++      LOG(FATAL) << "Unknown db backend " << db_backend;
++    }
++    LOG(ERROR) << "Processed " << count << " files.";
++  }
++  return 0;
++}
+-- 
+1.9.1
+
