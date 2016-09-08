@@ -1,5 +1,5 @@
 imageRootPath = 'png/';
-new_folder = 'jpg/';
+newRootPath = 'jpg/';
 
 
 folders = genpath(imageRootPath);
@@ -10,7 +10,7 @@ for f=1:length(folders)
     imagefiles = dir(fullfile(folders{f},'*.png'));
     if ~isempty(imagefiles)
         
-        new_folder=fullfile(new_folder, folders{f});
+        new_folder=fullfile(newRootPath, folders{f});
         if ~exist(new_folder,'dir')
             mkdir(new_folder);
         end
